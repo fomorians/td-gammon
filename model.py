@@ -1,3 +1,7 @@
+"""
+Definitions for the main object in a game.
+"""
+__all__ = ['Board', 'Roll', 'Turn', 'WHITE', 'BLACK']
 
 import random
 
@@ -141,8 +145,7 @@ class Board(object):
 
 class Point(object):
     """
-    A Point represents a position on the Board.  It contains zero or
-    more Pieces.
+    A Point represents a position on the Board and contains Pieces.
     """
 
     def __init__(I, num):
@@ -204,7 +207,7 @@ class Piece(object):
 
 class Roll(object):
     """
-    A Roll that can track which moves have been used.
+    A Roll of two dies.
     """
 
     def __init__(I, d1=None, d2=None):
@@ -228,6 +231,13 @@ class Roll(object):
 
     def __hash__(I):
         return (10 * I.d1) + I.d2
+
+    def __eq__(I, other):
+        return I.d1 == other.d1 and I.d2 == other.d2
+
+    @staticmethod
+    def from_str(s):
+        return Roll(*[int(i) for i in s.split('x')])
 
     def use(I, move):
         """
@@ -276,3 +286,40 @@ class Roll(object):
         Return list of unused dies.
         """
         return tuple(I.dies)
+
+
+class Turn(object):
+    """
+    A Turn captures the Roll and the moves made by the player.
+    """
+
+    def __init__(I, roll, moves):
+        I.roll = roll
+        I.moves = moves
+
+    def __str__(I):
+        return "{}: {}".format(I.roll, I.moves)
+
+    def __eq__(I, other):
+        return I.roll == other.roll and I.moves == other.moves
+
+    @staticmethod
+    def to_json(obj):
+        """
+        Hook for json.dump() & json.dumps().
+        """
+        if isinstance(obj, Turn):
+            return dict(roll=str(obj.roll), moves=obj.moves)
+        raise TypeError("not json-serializable: {}<{}>".format(type(obj), obj))
+
+    @staticmethod
+    def from_json(obj):
+        """
+        Hook for json.load() & json.loads().
+        """
+        if isinstance(obj, dict) and 'roll' in obj:
+            return Turn(Roll.from_str(obj['roll']), [tuple(i) for i in obj['moves']])
+        return obj
+
+    def __eq__(I, other):
+        return I.roll == other.roll and I.moves == other.moves

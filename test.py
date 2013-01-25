@@ -1,5 +1,12 @@
+"""
+Automated tests for the py-gammon package.  Intended to be ran with
+the nosetests utility.
+"""
 
-from .model import Board, Roll, WHITE, BLACK
+import json
+from .util import tmp_path
+from .model import Board, Roll, Turn, WHITE, BLACK
+from .game import Game
 
 
 NEW_BOARD_MOVES = { # All possible moves for all possible rolls from these points.
@@ -214,3 +221,40 @@ def test_unuse4():
         msg = str(e)
     print('MSG:', msg)
     assert msg == 'impossible to unuse'
+
+
+def test_json1():
+    'Can [de]serialize Turn objects.'
+    l = [
+        Turn(Roll(), [(1,2), (3,4)]),
+        Turn(Roll(), []),
+    ]
+    s = json.dumps(l, default=Turn.to_json)
+    print('TO JSON:', s)
+    x = json.loads(s, object_hook=Turn.from_json)
+    print('FROM JSON:', x)
+    for i in x:
+        print('ACTUAL:', type(i), i)
+    for i in l:
+        print('EXPECTED:', type(i), i)
+    assert x == l
+
+def test_save1():
+    'Can save & load games.'
+    game = Game()
+    game.roll_dice(Roll(2, 6))
+    game.move(1, 3)
+    game.move(12, 18)
+    game.roll_dice(Roll(1, 1))
+    game.move(8, 7)
+    game.move(8, 7)
+    game.draw()
+    print(game)
+    loaded_game = Game()
+    assert game != loaded_game
+    with tmp_path() as path:
+        game.save(path)
+        loaded_game.load(path)
+        loaded_game.draw()
+        print(loaded_game)
+        assert game == loaded_game
