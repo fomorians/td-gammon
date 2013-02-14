@@ -6,6 +6,36 @@ __all__ = ['tmp_path', 'freshmaker']
 import os, tempfile
 from contextlib import contextmanager
 
+
+class KeyedMixin:
+    """
+    Interface for objects to be hashable, comparable, and sortable.
+    Implementations need to define a `key` property that uniquely
+    distinguishes objects from eachother.
+    """
+
+    def __lt__(I, other):
+        return I.key < other.key
+
+    def __gt__(I, other):
+        return I.key > other.key
+
+    def __le__(I, other):
+        return I.key <= other.key
+
+    def __ge__(I, other):
+        return I.key >= other.key
+
+    def __eq__(I, other):
+        return I.key == other.key
+
+    def __ne__(I, other):
+        return I.key != other.key
+
+    def __hash__(I):
+        return hash(I.key)
+
+
 @contextmanager
 def tmp_path():
     """
