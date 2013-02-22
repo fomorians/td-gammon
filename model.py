@@ -27,8 +27,8 @@ class Board(object):
     25 is both the jail for black and home for white.  A
     representation of a new Board:
 
-    [ 12:W5 | 11    | 10    |  9    |  8:B3 |  7    ] [  6:B5 |  5    |  4    |  3    |  2    |  1:W2 ] [ 0 ]
-    [ 13:B5 | 14    | 15    | 16    | 17:W3 | 18    ] [ 19:W5 | 20    | 21    | 22    | 23    | 24:B2 ] [ 0 ]    
+    [ 12:W5 | 11    | 10    |  9    |  8:B3 |  7    ] [  6:B5 |  5    |  4    |  3    |  2    |  1:W2 ] [  0:W0:B0 ]
+    [ 13:B5 | 14    | 15    | 16    | 17:W3 | 18    ] [ 19:W5 | 20    | 21    | 22    | 23    | 24:B2 ] [ 25:B0:W0 ]
     """
 
     @property
@@ -56,6 +56,32 @@ class Board(object):
                 I.points[pt].push(Piece(BLACK, num))
                 num += 1
 
+    @staticmethod
+    def from_str(s):
+        """
+        Return a new Board from string representation of a Board.
+        """
+        is_digit = ('0','1','2','3','4','5','6','7','8','9').__contains__
+        brd = Board()
+        for pt in brd.points:
+            while pt.pieces:
+                pt.pop()
+        counts = {WHITE: 0, BLACK: 0}
+        for line in s.split('\n'):
+            for i in line.split():
+                if is_digit(i[0]):
+                    l = i.split(':')
+                    if len(l) > 1:
+                        pt = int(l[0])
+                        for pieces in l[1:]:
+                            color = pieces[0]
+                            count = int(pieces[1:])
+                            for j in range(count):
+                                brd.points[pt].push(Piece(color, counts[color]))
+                                counts[color] += 1
+        return brd
+
+
     def __str__(I):
         l = []
         out = l.append
@@ -68,7 +94,7 @@ class Board(object):
                 out(' | ')
         homed = len(I.homed(BLACK))
         jailed = len(I.jailed(WHITE))
-        out(" ] [ {:3} {:3} ]\n[ ".format('W' + str(jailed), 'B' + str(homed)))
+        out(" ] [  0:W{}:B{} ]\n[ ".format(jailed, homed))
         for i in range(13, 25):
             if i == 19:
                 out(' ] [ ')
@@ -77,7 +103,7 @@ class Board(object):
                 out(' | ')
         homed = len(I.homed(WHITE))
         jailed = len(I.jailed(BLACK))
-        out(" ] [ {:3} {:3} ]".format('W' + str(homed), 'B' + str(jailed)))
+        out(" ] [ 25:B{}:W{} ]".format(jailed, homed))
         return ''.join(l)
 
     def copy(I):
@@ -225,7 +251,7 @@ class Board(object):
 
 class Point(KeyedMixin, object):
     """
-    A Point represents a position on the Board and contains Pieces.
+    A Point represents a position on the Board.
     """
 
     @property
@@ -287,9 +313,10 @@ class Point(KeyedMixin, object):
 
     def blocked(I, color):
         """
-        True if this Point contains more than one opposing Piece.
+        True if this Point contains more than one opposing Piece,
+        excluding home/jail since they should never be blocked.
         """
-        return color != I.color and len(I.pieces) > 1
+        return I.num not in (0,25) and color != I.color and len(I.pieces) > 1
 
     @property
     def color(I):
@@ -316,7 +343,7 @@ class Point(KeyedMixin, object):
 
 class Piece(object):
     """
-    A game piece that knows which Point on the Board it currently is.
+    Points contain zero or more Pieces.
     """
 
     @property

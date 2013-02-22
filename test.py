@@ -18,6 +18,14 @@ def equals(expected, actual, msg=None):
          msg = "{} != {}".format(expected, actual)
     assert expected == actual, msg
 
+def gt(val1, val2, msg=None):
+    """
+    Wrap `assert` to provide better msg when fails.
+    """
+    if msg is None:
+         msg = "{} <= {}".format(val1, val2)
+    assert val1 > val2, msg
+
 
 NEW_BOARD_MOVES = { # All possible moves for all possible rolls from these points.
     1: {
@@ -366,9 +374,40 @@ def test_all_choices_roll21():
     game.roll_dice(Roll(2, 1))
     equals(set(), set(game.all_choices()).symmetric_difference([((1, 2), (1, 3)), ((1, 2), (2, 4)), ((1, 2), (12, 14)), ((1, 2), (17, 19)), ((1, 2), (19, 21)), ((1, 3), (1, 2)), ((1, 3), (3, 4)), ((1, 3), (17, 18)), ((1, 3), (19, 20)), ((12, 14), (1, 2)), ((12, 14), (14, 15)), ((12, 14), (17, 18)), ((12, 14), (19, 20)), ((17, 18), (1, 3)), ((17, 18), (12, 14)), ((17, 18), (17, 19)), ((17, 18), (18, 20)), ((17, 18), (19, 21)), ((17, 19), (1, 2)), ((17, 19), (17, 18)), ((17, 19), (19, 20)), ((19, 20), (1, 3)), ((19, 20), (12, 14)), ((19, 20), (17, 19)), ((19, 20), (19, 21)), ((19, 20), (20, 22)), ((19, 21), (1, 2)), ((19, 21), (17, 18)), ((19, 21), (19, 20)), ((19, 21), (21, 22))]))
 
+
+def test_weighted_strategy1():
+    'The "safe" strategy will avoid capturing pieces if will expose its pieces.'
+    # With this board and a roll of 4x1, the move [(12,13), (13,17)] captures 13:B1 but exposes 20:W1.
+    # [ 12:W3 | 11    | 10    |  9    |  8:B2 |  7:B4 ] [  6:B4 |  5    |  4:B2 |  3    |  2    |  1:W2 ] [  0:W0:B0 ]
+    # [ 13:B1 | 14    | 15    | 16    | 17:W2 | 18:B2 ] [ 19:W2 | 20:W1 | 21:W3 | 22    | 23:W2 | 24    ] [ 25:B0:W0 ]''')
+    b1 = Board.from_str('''[ 12:W2 | 11    | 10    |  9    |  8:B2 |  7:B4 ] [  6:B4 |  5    |  4:B2 |  3    |  2    |  1:W2 ] [  0:W0:B0 ]
+                           [ 13:B1 | 14    | 15    | 16    | 17:W3 | 18:B2 ] [ 19:W2 | 20:W1 | 21:W3 | 22    | 23:W2 | 24    ] [ 25:B0:W0 ]''')
+    b2 = Board.from_str('''[ 12:W2 | 11    | 10    |  9    |  8:B2 |  7:B4 ] [  6:B4 |  5    |  4:B2 |  3    |  2    |  1:W2 ] [  0:W0:B0 ]
+                           [ 13    | 14    | 15    | 16    | 17:W3 | 18:B2 ] [ 19:W2 | 20:W1 | 21:W3 | 22    | 23:W2 | 24    ] [ 25:B1:W0 ]''')
+    gt(strategy.safe(WHITE, b1), strategy.safe(WHITE, b2))
+
+
+def test_blocked1():
+    'Home should never be considered blocked.'
+    brd = Board.from_str('''[ 12:W3 | 11    | 10    |  9    |  8    |  7    ] [  6:B6 |  5:B3 |  4:B2 |  3:B4 |  2    |  1:W1 ] [  0:W1:B0 ]
+                            [ 13    | 14    | 15    | 16    | 17:W3 | 18    ] [ 19:W2 | 20:W1 | 21:W3 | 22    | 23:W2 | 24    ] [ 25:B0:W0 ]''')
+    assert not brd.points[0].blocked(BLACK)
+    brd = brd.move(12, 0)
+    assert not brd.points[0].blocked(BLACK)
+
+
+def test_can_home_when_enemy_jailed1():
+    'Should be able to move home even with enemies jailed.'
+    brd = Board.from_str('''[ 12:W2 | 11    | 10    |  9    |  8    |  7    ] [  6:B6 |  5:B3 |  4:B2 |  3:B4 |  2    |  1:W1 ] [  0:W2:B0 ]
+                            [ 13    | 14    | 15    | 16    | 17:W3 | 18    ] [ 19:W2 | 20:W1 | 21:W3 | 22    | 23:W2 | 24    ] [ 25:B0:W0 ]''')
+    print( brd.possible_moves(Roll(3, 2), 3) )
+    assert 0 in brd.possible_moves(Roll(3, 2), 3), 'cannot move home'
+
+
     # for path in game.all_choices():
     #     x = reduce(lambda brd,move: brd.move(*move), path, game.board)
     #     print()
     #     print("SCORE:", strategy.safe(game.color, x), "     PATH:", path)
     #     print(x)
     # assert False
+

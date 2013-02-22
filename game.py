@@ -241,16 +241,17 @@ class Game(object):
                     yield i
 
     def all_choices(I):
+        """
+        Return all possible paths from all points for current turn.
+        """
         min_moves = 0
         paths = set()
-        total = 0
         for path in Game._all_choices(I.board, I.roll, I.color, ()):
-            total += 1
             if len(path) > min_moves:
                 min_moves = len(path)
             paths.add(path)
-        # print("TOTAL:", total, "     ACTUAL:", len([i for i in paths if len(i) >= min_moves]))
         return sorted(i for i in paths if len(i) >= min_moves)
+
 
 if __name__ == '__main__':
     Game().play()
