@@ -1,13 +1,7 @@
-"""
-Algorithms for evaluating how good a Board is for a given color.
-"""
-__all__ = ['Weights', 'simply_weighted', 'aggressive', 'safe']
-
 import random
 from functools import partial
 from collections import namedtuple
 from model import Board, WHITE, BLACK
-
 
 class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold', 'safe'])):
     """
@@ -18,7 +12,6 @@ class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold',
       * points: number of strongholds made
       * safe: number of pieces safe (past all enemy pieces)
     """
-
 
 def simply_weighted(weights, color, board):
     """
@@ -34,7 +27,6 @@ def simply_weighted(weights, color, board):
         score += weights.stronghold * len(board.strongholds(color))
     return score
 
-
 def aggressive(color, board):
     """
     A strategy that highly favors boards with opponent pieces in jail.
@@ -48,7 +40,6 @@ aggressive.weights = Weights(
     stronghold = 2,
     safe = 0,
 )
-
 
 def safe(color, board):
     """
@@ -69,7 +60,3 @@ def random(color, board):
     A strategy that returns a random score for any board.
     """
     return random.randint(0, 9)
-
-
-if __name__ == '__main__':
-    pass
