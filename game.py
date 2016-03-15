@@ -1,21 +1,26 @@
-import sys, json
-from functools import partial, reduce
+import json
 
-from model import Board, Point, Roll, Turn, WHITE, BLACK
+from player import Player
+from player_ai import PlayerAI
+from player_human import PlayerHuman
+
+from board import Board
+from point import Point
+from roll import Roll
+from turn import Turn
+
 import strategy
 
 class Game(object):
     """
     A game is a Board and a history of Turns.
     """
-    WHITE = 'W'
-    BLACK = 'B'
 
     def __init__(self, white=None, black=None):
         self.board = Board()
         self.history = []
-        self.black = black or ConsolePlayer()
-        self.white = white or ComputerPlayer(WHITE, strategy.safe)
+        self.black = black or PlayerHuman()
+        self.white = white or PlayerAI(Player.WHITE, strategy.safe)
 
     def __str__(self):
         return '\n'.join(str(i) for i in self.history)
@@ -35,7 +40,7 @@ class Game(object):
         """
         The current color.  White always starts.
         """
-        return BLACK if len(self.history) % 2 == 0 else WHITE
+        return Player.BLACK if len(self.history) % 2 == 0 else Player.WHITE
 
     @property
     def moves(self):
@@ -50,7 +55,7 @@ class Game(object):
         """
         while True:
             self.roll_dice()
-            player = self.white if self.color == WHITE else self.black
+            player = self.white if self.color == Player.WHITE else self.black
             player.interact(self)
 
     def roll_dice(self, roll=None):
@@ -84,11 +89,10 @@ class Game(object):
           * current board
           * possible moves
         """
-        print()
         print(self.board)
         print('Current roll for {}: {} {}'.format(self.color, self.roll, self.roll.dies))
         print('Possible moves:')
-        cant_move = True
+        cannot_move = True
         possible_points = [self.board.jail(self.color)]
         if not possible_points[0].pieces:
             # No pieces are jailed, so consider entire board.
@@ -97,9 +101,9 @@ class Game(object):
             if point.pieces and point.color == self.color:
                 moves = self.board.possible_moves(self.roll, point)
                 if moves:
-                    cant_move = False
+                    cannot_move = False
                 print('  {} -> {}'.format(point, moves)) # ','.join(str(i) for i in moves)))
-        if cant_move:
+        if cannot_move:
             print('  No possible moves left')
 
     def save(self, path):
@@ -126,7 +130,7 @@ class Game(object):
 
     @staticmethod
     def _all_choices(brd, roll, color, path):
-        direction = 1 if color == WHITE else -1
+        direction = 1 if color == Player.WHITE else -1
         min_point = 1
         max_point = 24
 

@@ -1,4 +1,7 @@
 class Player(object):
+    WHITE = 'W'
+    BLACK = 'B'
+
     """
     Interact with a board given a color & strategy.
     """

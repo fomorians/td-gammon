@@ -1,3 +1,5 @@
+from player import Player
+
 class PlayerHuman(Player):
     """
     A human player using text-based console to interact with the game.
@@ -26,6 +28,7 @@ class PlayerHuman(Player):
             cmd = input('> ')
         except EOFError:
             cmd = 'stop'
+
         if cmd.startswith('stop'):
             return self.stop
         elif cmd.startswith('save'):
@@ -37,6 +40,3 @@ class PlayerHuman(Player):
         else:
             start, end = [int(i) for i in cmd.split()]
             return partial(game.move, start, end)
-
-    def stop(self):
-        sys.exit('Good-bye')

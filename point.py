@@ -1,4 +1,4 @@
-from util import KeyedMixin
+from keyed_mixin import KeyedMixin
 
 class Point(KeyedMixin, object):
     """

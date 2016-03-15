@@ -1,3 +1,7 @@
+from functools import partial, reduce
+
+from player import Player
+
 class PlayerAI(Player):
     """
     An artificial player using given strategy to make moves.
@@ -9,13 +13,13 @@ class PlayerAI(Player):
 
     def interact(self, game):
         """
-        Using strategy make most optimal move by enumerating all possible board positions.
+        Make optimal move by enumerating all possible board positions.
         """
         high_score = -9999
         best_moves = []
 
         for moves in game.all_choices():
-            score = self.score(reduce(lambda brd,move: brd.move(*move), moves, game.board))
+            score = self.score(reduce(lambda board, move: board.move(*move), moves, game.board))
             if score > high_score:
                 high_score = score
                 best_moves = moves

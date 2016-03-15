@@ -1,7 +1,10 @@
 import random
+
 from functools import partial
 from collections import namedtuple
-from model import Board, WHITE, BLACK
+
+from player import Player
+from board import Board
 
 class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold', 'safe'])):
     """
@@ -12,12 +15,13 @@ class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold',
       * points: number of strongholds made
       * safe: number of pieces safe (past all enemy pieces)
     """
+    pass
 
 def simply_weighted(weights, color, board):
     """
     A generic strategy that computes the quality of a board from given weights.
     """
-    enemy = WHITE if color == BLACK else BLACK
+    enemy = Player.WHITE if color == Player.BLACK else Player.BLACK
     score = 0
     if board.can_go_home(color):
         score = weights.homed * len(board.homed(color))

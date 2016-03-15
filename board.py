@@ -1,5 +1,9 @@
 import operator
 
+from player import Player
+from point import Point
+from piece import Piece
+
 class Board(object):
     """
     A Board has 24 Points with at most 15 Pieces in play at a time.
@@ -13,9 +17,9 @@ class Board(object):
     [ 12 | 11 | 10 |  9 |  8 |  7 ][  6 |  5 |  4 |  3 |  2 |  1 ] [ white jail / black home ]
     [ 13 | 14 | 15 | 16 | 17 | 18 ][ 19 | 20 | 21 | 22 | 23 | 24 ] [ black jail / white home ]
 
-    Point 0 is both the jail for white and the home for black.  Point
-    25 is both the jail for black and home for white.  A
-    representation of a new Board:
+    Point 0 is both the jail for white and the home for black.
+    Point 25 is both the jail for black and home for white.
+    A representation of a new Board:
 
     [ 12:W5 | 11    | 10    |  9    |  8:B3 |  7    ] [  6:B5 |  5    |  4    |  3    |  2    |  1:W2 ] [  0:W0:B0 ]
     [ 13:B5 | 14    | 15    | 16    | 17:W3 | 18    ] [ 19:W5 | 20    | 21    | 22    | 23    | 24:B2 ] [ 25:B0:W0 ]
@@ -38,12 +42,12 @@ class Board(object):
         num = 0
         for pt, count in ((1,2), (12,5), (17,3), (19,5)):
             for i in range(count):
-                self.points[pt].push(Piece(WHITE, num))
+                self.points[pt].push(Piece(Player.WHITE, num))
                 num += 1
         num = 0
         for pt, count in ((24,2), (13,5), (8,3), (6,5)):
             for i in range(count):
-                self.points[pt].push(Piece(BLACK, num))
+                self.points[pt].push(Piece(Player.BLACK, num))
                 num += 1
 
     @staticmethod
@@ -56,7 +60,7 @@ class Board(object):
         for pt in brd.points:
             while pt.pieces:
                 pt.pop()
-        counts = {WHITE: 0, BLACK: 0}
+        counts = {Player.WHITE: 0, Player.BLACK: 0}
         for line in s.split('\n'):
             for i in line.split():
                 if is_digit(i[0]):
@@ -81,8 +85,8 @@ class Board(object):
             out(str(self.points[i]))
             if i not in (7, 1):
                 out(' | ')
-        homed = len(self.homed(BLACK))
-        jailed = len(self.jailed(WHITE))
+        homed = len(self.homed(Player.BLACK))
+        jailed = len(self.jailed(Player.WHITE))
         out(" ] [  0:W{}:B{} ]\n[ ".format(jailed, homed))
         for i in range(13, 25):
             if i == 19:
@@ -90,8 +94,8 @@ class Board(object):
             out(str(self.points[i]))
             if i not in (18,24):
                 out(' | ')
-        homed = len(self.homed(WHITE))
-        jailed = len(self.jailed(BLACK))
+        homed = len(self.homed(Player.WHITE))
+        jailed = len(self.jailed(Player.BLACK))
         out(" ] [ 25:B{}:W{} ]".format(jailed, homed))
         return ''.join(l)
 
@@ -118,7 +122,7 @@ class Board(object):
             src = src.num
         assert src >= 0 and src <= 25, 'valid points are [0..25]'
         src = new.points[src]
-        sharing_allowed = dst in (new.home(WHITE), new.home(BLACK))
+        sharing_allowed = dst in (new.home(Player.WHITE), new.home(Player.BLACK))
         if not sharing_allowed:
             assert not dst.blocked(src.color), 'cannot move to a blocked point'
         if dst.pieces and src.color != dst.color and not sharing_allowed:
@@ -137,7 +141,7 @@ class Board(object):
             point = self.points[point]
         assert point.pieces, 'there are no pieces on this point'
         piece = point.pieces[0]
-        direction = 1 if piece.color == WHITE else -1
+        direction = 1 if piece.color == Player.WHITE else -1
         dies = roll.dies
         if not dies:
             return []
@@ -152,7 +156,7 @@ class Board(object):
         min_point = 1
         max_point = 24
         if self.can_go_home(piece.color):
-            if piece.color == BLACK:
+            if piece.color == Player.BLACK:
                 min_point -= 1
             else:
                 max_point += 1
@@ -172,7 +176,7 @@ class Board(object):
         """
         True if there are no pieces outside given color's home quadrant.
         """
-        points = range(7, 26) if color == BLACK else range(19)
+        points = range(7, 26) if color == Player.BLACK else range(19)
         for point in points:
             if color == self.points[point].color:
                 return False
@@ -182,14 +186,14 @@ class Board(object):
         """
         True once all pieces for a color are home.
         """
-        return 15 == len([i for i in self.home(WHITE).pieces if i.color == WHITE]) or \
-            15 == len([i for i in self.home(BLACK).pieces if i.color == BLACK])
+        return 15 == len([i for i in self.home(Player.WHITE).pieces if i.color == Player.WHITE]) or \
+            15 == len([i for i in self.home(Player.BLACK).pieces if i.color == Player.BLACK])
 
     def jail(self, color):
         """
         Return Point that represents jail for given color.
         """
-        return self.points[0 if color == WHITE else 25]
+        return self.points[0 if color == Player.WHITE else 25]
 
     def jailed(self, color):
         """
@@ -201,7 +205,7 @@ class Board(object):
         """
         Return Point that represents home for given color.
         """
-        return self.points[0 if color == BLACK else 25]
+        return self.points[0 if color == Player.BLACK else 25]
 
     def homed(self, color):
         """
@@ -219,12 +223,12 @@ class Board(object):
         """
         List of points past last enemy piece.
         """
-        if color == WHITE:
-            enemy = BLACK
+        if color == Player.WHITE:
+            enemy = Player.BLACK
             behind = operator.gt
             enemy_line = self.points[max(i for i in range(25, 1, -1) if self.points[i].color == enemy)]
         else:
-            enemy = WHITE
+            enemy = Player.WHITE
             behind = operator.lt
             enemy_line = self.points[min(i for i in range(0, 24, 1) if self.points[i].color == enemy)]
         return [pt for pt in self.points if behind(pt, enemy_line) and pt.pieces]

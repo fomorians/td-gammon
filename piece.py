@@ -1,3 +1,5 @@
+from player import Player
+
 class Piece(object):
     """
     Points contain zero or more Pieces.
@@ -16,8 +18,8 @@ class Piece(object):
     def __init__(self, color, num):
         assert num >= 0 and num <= 15, \
             "number out of range [0,15]: {}".format(num)
-        assert color in (WHITE, BLACK), \
-            "color must be '{}' or '{}': {}".format(WHITE, BLACK, color)
+        assert color in (Player.WHITE, Player.BLACK), \
+            "color must be '{}' or '{}': {}".format(Player.WHITE, Player.BLACK, color)
         self._color = color
         self._num = num
 

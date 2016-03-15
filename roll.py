@@ -14,10 +14,13 @@ class Roll(object):
             d1 = random.choice(range(1, 7))
         if d2 is None:
             d2 = random.choice(range(1, 7))
+
         assert d1 >= 1 and d1 <= 6, "invalid roll: {}".format(d1)
         assert d2 >= 1 and d2 <= 6, "invalid roll: {}".format(d2)
+
         # Preserve original roll.
         self.d1, self.d2 = d1, d2
+
         # Capture number of unused dies/moves.
         if d1 != d2:
             self._dies = (d1, d2)
@@ -61,14 +64,17 @@ class Roll(object):
                 # about the order since will either be doubles or both
                 # dies will be needed when not doubles.
                 move -= working.pop()
+
             if move != 0:
                 raise ValueError('impossible move')
+
         self._dies = tuple(working)
 
     def unuse(self, move):
         """
         Mark dies as unused for given move - useful for undo or automated tests.
         """
+
         # assert die in (self.d1, self.d2), 'die not part of this roll'
         working = list(self.dies)
         if move in (self.d1, self.d2):
@@ -85,6 +91,8 @@ class Roll(object):
                 # a die until the move is satisfied
                 working.append(self.d1)
                 move -= self.d1
+
             if move != 0 or len(working) > 4:
                 raise ValueError('impossible to unuse')
+
         self._dies = tuple(working)
