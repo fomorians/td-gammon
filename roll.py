@@ -1,5 +1,7 @@
 import random
 
+# DICE = [u"\u2680", u"\u2681", u"\u2682", u"\u2683", u"\u2684", u"\u2685"]
+
 class Roll(object):
     """
     A Roll of two dies.
@@ -27,6 +29,9 @@ class Roll(object):
     def dies(self):
         'Collection of unused dies.'
         return self._dies
+
+    # def __str__(self):
+    #     return u"{} {}".format(DICE[self.d1 - 1], DICE[self.d2 - 1])
 
     def __repr__(self):
         return "{}x{}".format(self.d1, self.d2)
