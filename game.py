@@ -1,26 +1,22 @@
+import sys
 import json
 
 from player import Player
-from player_ai import PlayerAI
-from player_human import PlayerHuman
-
 from board import Board
 from point import Point
 from roll import Roll
 from turn import Turn
-
-import strategy
 
 class Game(object):
     """
     A game is a Board and a history of Turns.
     """
 
-    def __init__(self, white=None, black=None):
+    def __init__(self, white, black):
         self.board = Board()
         self.history = []
-        self.black = black or PlayerHuman()
-        self.white = white or PlayerAI(Player.WHITE, strategy.safe)
+        self.black = black
+        self.white = white
 
     def __str__(self):
         return '\n'.join(str(i) for i in self.history)
@@ -49,14 +45,24 @@ class Game(object):
         """
         return self.history[-1].moves
 
+    @property
+    def winner(self):
+        return Player.WHITE if len(self.board.homed(Player.WHITE)) == 15 else Player.BLACK
+
     def play(self):
         """
         The main game loop.
         """
-        while True:
-            self.roll_dice()
-            player = self.white if self.color == Player.WHITE else self.black
-            player.interact(self)
+        while not self.board.finished():
+            self.next()
+
+    def next(self):
+        self.roll_dice()
+        player = self.white if self.color == Player.WHITE else self.black
+        player.interact(self)
+
+    def stop(self):
+        sys.exit('Game stopped')
 
     def roll_dice(self, roll=None):
         """
@@ -70,10 +76,9 @@ class Game(object):
         * Mark the move as used in the roll.
         * Capture move in this game's history.
         """
-        if isinstance(src, Point):
-            src = src.num
-        if isinstance(dst, Point):
-            dst = dst.num
+        assert(src >= 0 and src <= 25)
+        assert(dst >= 0 and dst <= 25)
+
         dies = abs(dst - src)
         new = self.board.move(src, dst)
         self.roll.use(dies)
@@ -92,6 +97,8 @@ class Game(object):
         print(self.board)
         print('Current roll for {}: {} {}'.format(self.color, self.roll, self.roll.dies))
         print('Possible moves:')
+
+        # TODO: this might be wrong
         cannot_move = True
         possible_points = [self.board.jail(self.color)]
         if not possible_points[0].pieces:
@@ -128,6 +135,7 @@ class Game(object):
         self.board = board
         self.history = history
 
+    # TODO: this might be wrong
     @staticmethod
     def _all_choices(brd, roll, color, path):
         direction = 1 if color == Player.WHITE else -1
@@ -139,7 +147,7 @@ class Game(object):
         else:
             points = filter(lambda pt: pt.color == color and pt.pieces, brd.points)
             if brd.can_go_home(color):
-                if color == BLACK:
+                if color == Player.BLACK:
                     min_point -= 1
                 else:
                     max_point += 1

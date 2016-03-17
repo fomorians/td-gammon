@@ -6,6 +6,13 @@ from collections import namedtuple
 from player import Player
 from board import Board
 
+def td_gammon_strategy(model, color, board):
+    scores = model.get_output(board)
+    if color == Player.WHITE:
+        return max(scores[0][0], scores[0][2])
+    else:
+        return max(scores[0][1], scores[0][3])
+
 class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold', 'safe'])):
     """
     Weights to apply to these data points:
@@ -31,13 +38,13 @@ def simply_weighted(weights, color, board):
         score += weights.stronghold * len(board.strongholds(color))
     return score
 
-def aggressive(color, board):
+def aggressive_strategy(color, board):
     """
     A strategy that highly favors boards with opponent pieces in jail.
     """
     return simply_weighted(aggressive.weights, color, board)
 
-aggressive.weights = Weights(
+aggressive_strategy.weights = Weights(
     jailed = 5,
     homed = 1,
     exposed = -2,
@@ -45,13 +52,13 @@ aggressive.weights = Weights(
     safe = 0,
 )
 
-def safe(color, board):
+def safe_strategy(color, board):
     """
     A strategy that highly penalizes exposed pieces.
     """
     return simply_weighted(safe.weights, color, board)
 
-safe.weights = Weights(
+safe_strategy.weights = Weights(
     jailed = 1,
     homed = 1,
     exposed = -5,
@@ -59,7 +66,7 @@ safe.weights = Weights(
     safe = 0,
 )
 
-def random(color, board):
+def random_strategy(color, board):
     """
     A strategy that returns a random score for any board.
     """

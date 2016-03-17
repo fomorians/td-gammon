@@ -4,10 +4,6 @@ class Roll(object):
     """
     A Roll of two dies.
     """
-    @property
-    def dies(self):
-        'Collection of unused dies.'
-        return self._dies
 
     def __init__(self, d1=None, d2=None):
         if d1 is None:
@@ -22,10 +18,15 @@ class Roll(object):
         self.d1, self.d2 = d1, d2
 
         # Capture number of unused dies/moves.
-        if d1 != d2:
-            self._dies = (d1, d2)
+        if d1 == d2:
+            self._dies = (d1, d1, d1, d1)
         else:
-            self._dies = (d1,d1,d1,d1)
+            self._dies = (d1, d2)
+
+    @property
+    def dies(self):
+        'Collection of unused dies.'
+        return self._dies
 
     def __repr__(self):
         return "{}x{}".format(self.d1, self.d2)

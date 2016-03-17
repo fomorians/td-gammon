@@ -1,3 +1,5 @@
+from functools import partial
+
 from player import Player
 
 class PlayerHuman(Player):
@@ -6,6 +8,11 @@ class PlayerHuman(Player):
     """
 
     def interact(self, game):
+        print('move <start-position> <end-position>\tmake a move')
+        print('save <path>\t\t\t\tsave the game')
+        print('load <path>\t\t\t\tload a saved game')
+        print('stop\t\t\t\t\tstop the game')
+
         while game.roll.dies:
             game.draw()
             try:
@@ -13,10 +20,6 @@ class PlayerHuman(Player):
                 cmd()
             except Exception as e:
                 print('Invalid command: {}'.format(e))
-                print(' - to make a move: <start-position> <end-position>')
-                print(' - to stop the game: stop')
-                print(' - to save the game: save <path>')
-                print(' - to load a saved game: load <path>')
 
     def get_command(self, game):
         """
@@ -30,13 +33,17 @@ class PlayerHuman(Player):
             cmd = 'stop'
 
         if cmd.startswith('stop'):
-            return self.stop
-        elif cmd.startswith('save'):
-            l = cmd.split()
-            return partial(game.save, l[1])
-        elif cmd.startswith('load'):
-            l = cmd.split()
-            return partial(game.load, l[1])
-        else:
-            start, end = [int(i) for i in cmd.split()]
+            return game.stop
+
+        if cmd.startswith('save'):
+            cmd_name, path = cmd.split()
+            return partial(game.save, path)
+
+        if cmd.startswith('load'):
+            cmd_name, path = cmd.split()
+            return partial(game.load, path)
+
+        if cmd.startswith('move'):
+            cmd_name, start, end = cmd.split()
+            start, end = int(start), int(end)
             return partial(game.move, start, end)

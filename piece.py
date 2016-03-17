@@ -5,16 +5,6 @@ class Piece(object):
     Points contain zero or more Pieces.
     """
 
-    @property
-    def color(self):
-        'The side this Piece belongs to.'
-        return self._color
-
-    @property
-    def num(self):
-        'The number of this Piece in range [0..14]'
-        return self._num
-
     def __init__(self, color, num):
         assert num >= 0 and num <= 15, \
             "number out of range [0,15]: {}".format(num)
@@ -27,10 +17,20 @@ class Piece(object):
         return "{}:{}".format(self.color, self.num)
 
     def __hash__(self):
-        return (100 if self.color == WHITE else 200) + self.num
+        return (100 if self.color == Player.WHITE else 200) + self.num
 
     def copy(self):
         """
         Return a deep copy of this Piece.
         """
         return Piece(self.color, self.num)
+
+    @property
+    def color(self):
+        'The side this Piece belongs to.'
+        return self._color
+
+    @property
+    def num(self):
+        'The number of this Piece in range [0..14]'
+        return self._num

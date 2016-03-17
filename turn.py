@@ -30,6 +30,3 @@ class Turn(object):
         if isinstance(obj, dict) and 'roll' in obj:
             return Turn(Roll.from_str(obj['roll']), [tuple(i) for i in obj['moves']])
         return obj
-
-    def __eq__(self, other):
-        return self.roll == other.roll and self.moves == other.moves

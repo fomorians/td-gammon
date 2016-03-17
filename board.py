@@ -1,3 +1,4 @@
+import numpy as np
 import operator
 
 from player import Player
@@ -76,28 +77,47 @@ class Board(object):
         return brd
 
     def __str__(self):
-        l = []
-        out = l.append
-        out('[ ')
+        arr = []
+        arr.append('[ ')
         for i in range(12, 0, -1):
             if i == 6:
-                out(' ] [ ')
-            out(str(self.points[i]))
+                arr.append(' ] [ ')
+            arr.append(str(self.points[i]))
             if i not in (7, 1):
-                out(' | ')
+                arr.append(' | ')
         homed = len(self.homed(Player.BLACK))
         jailed = len(self.jailed(Player.WHITE))
-        out(" ] [  0:W{}:B{} ]\n[ ".format(jailed, homed))
+        arr.append(" ] [  0:W{}:B{} ]\n[ ".format(jailed, homed))
         for i in range(13, 25):
             if i == 19:
-                out(' ] [ ')
-            out(str(self.points[i]))
-            if i not in (18,24):
-                out(' | ')
+                arr.append(' ] [ ')
+            arr.append(str(self.points[i]))
+            if i not in (18, 24):
+                arr.append(' | ')
         homed = len(self.homed(Player.WHITE))
         jailed = len(self.jailed(Player.BLACK))
-        out(" ] [ 25:B{}:W{} ]".format(jailed, homed))
-        return ''.join(l)
+        arr.append(" ] [ 25:B{}:W{} ]".format(jailed, homed))
+        return ''.join(arr)
+
+    def to_array(self):
+        num_points = len(self.points)
+
+        pieces = np.zeros(num_points, dtype='uint')
+        colors = np.zeros(num_points, dtype='uint')
+        for point in self.points:
+            pieces[point.num] = point.len()
+            colors[point.num] = 1 if point.color == Player.WHITE else 0
+
+        # one-hot encoding
+        max_pieces = 15
+        ones = np.zeros((num_points, max_pieces + 1)) # +1 to include "empty"
+        ones[np.arange(num_points), pieces] = 1
+
+        ones_colors = np.zeros((num_points, max_pieces + 2)) # +1 from above, +1 to include color
+        ones_colors[:,0] = colors
+        ones_colors[:,1:] = ones
+
+        return ones_colors.reshape(1, ones_colors.size)
 
     def copy(self):
         """
@@ -107,30 +127,33 @@ class Board(object):
         new._points = tuple(pt.copy() for pt in self.points)
         return new
 
+    # TODO: this might be wrong
     def move(self, src, dst):
         """
         Return new Board with a piece from src moved to dst.
           * src: a Point instance or position
           * dts: a Point instance or position
         """
-        new = self.copy()
-        if not isinstance(dst, int):
-            dst = dst.num
+        board = self.copy()
+
         assert dst >= 0 and dst <= 25, 'valid points are [0..25]'
-        dst = new.points[dst]
-        if not isinstance(src, int):
-            src = src.num
         assert src >= 0 and src <= 25, 'valid points are [0..25]'
-        src = new.points[src]
-        sharing_allowed = dst in (new.home(Player.WHITE), new.home(Player.BLACK))
+
+        dst = board.points[dst]
+        src = board.points[src]
+
+        sharing_allowed = dst in (board.home(Player.WHITE), board.home(Player.BLACK))
         if not sharing_allowed:
             assert not dst.blocked(src.color), 'cannot move to a blocked point'
+
         if dst.pieces and src.color != dst.color and not sharing_allowed:
             # Move exposed piece to jail.
-            new.jail(dst.color).push(dst.pop())
-        dst.push(src.pop())
-        return new
+            board.jail(dst.color).push(dst.pop())
 
+        dst.push(src.pop())
+        return board
+
+    # TODO: this might be wrong
     def possible_moves(self, roll, point):
         """
         Return list of available Points to move to, accounting for all
@@ -186,8 +209,8 @@ class Board(object):
         """
         True once all pieces for a color are home.
         """
-        return 15 == len([i for i in self.home(Player.WHITE).pieces if i.color == Player.WHITE]) or \
-            15 == len([i for i in self.home(Player.BLACK).pieces if i.color == Player.BLACK])
+        return len(self.homed(Player.WHITE)) == 15 \
+            or len(self.homed(Player.BLACK)) == 15
 
     def jail(self, color):
         """
