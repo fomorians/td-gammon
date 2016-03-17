@@ -1,3 +1,3 @@
-# py-gammon
+# td-gammon
 
-Backgammon implemented in python.
+Modern implementation of [TD-Gammon](http://www.bkgm.com/articles/tesauro/tdl.html).
