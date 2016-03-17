@@ -51,31 +51,6 @@ class Board(object):
                 self.points[pt].push(Piece(Player.BLACK, num))
                 num += 1
 
-    @staticmethod
-    def from_str(s):
-        """
-        Return a new Board from string representation of a Board.
-        """
-        is_digit = ('0','1','2','3','4','5','6','7','8','9').__contains__
-        brd = Board()
-        for pt in brd.points:
-            while pt.pieces:
-                pt.pop()
-        counts = {Player.WHITE: 0, Player.BLACK: 0}
-        for line in s.split('\n'):
-            for i in line.split():
-                if is_digit(i[0]):
-                    l = i.split(':')
-                    if len(l) > 1:
-                        pt = int(l[0])
-                        for pieces in l[1:]:
-                            color = pieces[0]
-                            count = int(pieces[1:])
-                            for j in range(count):
-                                brd.points[pt].push(Piece(color, counts[color]))
-                                counts[color] += 1
-        return brd
-
     def __str__(self):
         arr = []
         arr.append('[ ')
@@ -152,48 +127,6 @@ class Board(object):
 
         dst.push(src.pop())
         return board
-
-    # TODO: this might be wrong
-    def possible_moves(self, roll, point):
-        """
-        Return list of available Points to move to, accounting for all
-        combinations of unused dies.
-        """
-        if isinstance(point, int):
-            assert point >= 0 and point <= 25, 'valid points are [0..25]'
-            point = self.points[point]
-        assert point.pieces, 'there are no pieces on this point'
-        piece = point.pieces[0]
-        direction = 1 if piece.color == Player.WHITE else -1
-        dies = roll.dies
-        if not dies:
-            return []
-        if len(dies) == 1:
-            paths = [[dies[0]]]
-        elif dies[0] == dies[1]:
-            paths = [len(dies) * [dies[0]]]
-        else:
-            paths = [(dies[0], dies[1]), (dies[1], dies[0])]
-        multiple_jailed = len(self.jailed(piece.color)) > 1
-        moves = []
-        min_point = 1
-        max_point = 24
-        if self.can_go_home(piece.color):
-            if piece.color == Player.BLACK:
-                min_point -= 1
-            else:
-                max_point += 1
-        for hops in paths:
-            if multiple_jailed:
-                hops = hops[:1]
-            num = point.num
-            for hop in hops:
-                num += direction * hop
-                if num < min_point or num > max_point or self.points[num].blocked(piece.color):
-                    break
-                if num not in moves:
-                    moves.append(num)
-        return sorted(moves)
 
     def can_go_home(self, color):
         """
