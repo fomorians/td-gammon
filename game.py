@@ -95,23 +95,7 @@ class Game(object):
           * possible moves
         """
         print(self.board)
-        print('Current roll for {}: {} {}'.format(self.color, self.roll, self.roll.dies))
-        print('Possible moves:')
-
-        # TODO: this might be wrong
-        cannot_move = True
-        possible_points = [self.board.jail(self.color)]
-        if not possible_points[0].pieces:
-            # No pieces are jailed, so consider entire board.
-            possible_points = [self.board.points[i] for i in range(26)]
-        for point in possible_points:
-            if point.pieces and point.color == self.color:
-                moves = self.board.possible_moves(self.roll, point)
-                if moves:
-                    cannot_move = False
-                print('  {} -> {}'.format(point, moves)) # ','.join(str(i) for i in moves)))
-        if cannot_move:
-            print('  No possible moves left')
+        print('{}: {}'.format(self.color, self.roll))
 
     def save(self, path):
         """
