@@ -51,6 +51,13 @@ class Board(object):
                 self.points[pt].push(Piece(Player.BLACK, num))
                 num += 1
 
+    def last_checkers_position(self, color):
+        positions = range(0, 25) if color == Player.WHITE else range(25, 0, -1)
+        for position in positions:
+            if self.points[position].color == color:
+                return position
+        return 25 if color == Player.WHITE else 0
+
     def __str__(self):
         arr = []
         arr.append('[ ')
@@ -75,20 +82,32 @@ class Board(object):
         return ''.join(arr)
 
     def to_array(self):
-        num_points = len(self.points)
+        num_points = len(self.points) + 2
 
         pieces = np.zeros(num_points, dtype='uint')
         colors = np.zeros(num_points, dtype='uint')
+        i = 0
         for point in self.points:
-            pieces[point.num] = point.len()
-            colors[point.num] = 1 if point.color == Player.WHITE else 0
+            # expand home/jail into separate rows
+            if point.num in (0, 25):
+                pieces[i] = point.count(Player.BLACK)
+                colors[i] = 0
+                i += 1
+
+                pieces[i] = point.count(Player.WHITE)
+                colors[i] = 1
+                i += 1
+            else:
+                pieces[i] = point.count()
+                colors[i] = 1 if point.color == Player.WHITE else 0
+                i += 1
 
         # one-hot encoding
         max_pieces = 15
         ones = np.zeros((num_points, max_pieces + 1)) # +1 to include "empty"
         ones[np.arange(num_points), pieces] = 1
 
-        ones_colors = np.zeros((num_points, max_pieces + 2)) # +1 from above, +1 to include color
+        ones_colors = np.zeros((num_points, max_pieces + 2)) # +1 for empty, +1 for color
         ones_colors[:,0] = colors
         ones_colors[:,1:] = ones
 
@@ -102,7 +121,6 @@ class Board(object):
         new._points = tuple(pt.copy() for pt in self.points)
         return new
 
-    # TODO: this might be wrong
     def move(self, src, dst):
         """
         Return new Board with a piece from src moved to dst.
@@ -111,8 +129,8 @@ class Board(object):
         """
         board = self.copy()
 
-        assert dst >= 0 and dst <= 25, 'valid points are [0..25]'
         assert src >= 0 and src <= 25, 'valid points are [0..25]'
+        assert dst >= 0 and dst <= 25, 'valid points are [0..25]'
 
         dst = board.points[dst]
         src = board.points[src]
@@ -121,11 +139,12 @@ class Board(object):
         if not sharing_allowed:
             assert not dst.blocked(src.color), 'cannot move to a blocked point'
 
+        color = Player.WHITE if dst.num > src.num else Player.BLACK
         if dst.pieces and src.color != dst.color and not sharing_allowed:
             # Move exposed piece to jail.
-            board.jail(dst.color).push(dst.pop())
+            board.jail(dst.color).push(dst.pop(Player.WHITE if color == Player.BLACK else Player.BLACK))
 
-        dst.push(src.pop())
+        dst.push(src.pop(color))
         return board
 
     def can_go_home(self, color):
