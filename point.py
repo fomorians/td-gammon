@@ -59,20 +59,31 @@ class Point(object):
         """
         Add given Piece to this Point.
         """
-        if piece not in self.pieces:
-            self._pieces += (piece,)
-            if self.num not in (0, 25): # Making exception for jail/home.
-                assert set(i.color for i in self.pieces) == set([piece.color]), \
-                    'only pieces of same color allowed in a point'
+        if piece in self.pieces:
+            return
 
-    def pop(self):
+        self._pieces += (piece,)
+
+        if self.num not in (0, 25): # Making exception for jail/home.
+            a = str(set(i.color for i in self.pieces))
+            b = str(set([piece.color]))
+            assert a == b, "only pieces of same color allowed in a point {0} {1}".format(a, b)
+
+    def pop(self, color):
         """
         Remove top Piece and return it.
         """
         assert self.pieces, 'no pieces at this point'
-        piece = self.pieces[-1]
-        self._pieces = self.pieces[:-1]
-        return piece
+        assert color, 'no specified color'
+
+        index = 0
+        for piece in self.pieces:
+            if piece.color == color:
+                self._pieces = self.pieces[:index] + self.pieces[(index+1):]
+                return piece
+            index += 1
+
+        assert False, 'no pieces of this color {0} at {1}'.format(str(color), str(self.num))
 
     def blocked(self, color):
         """
@@ -81,8 +92,11 @@ class Point(object):
         """
         return self.num not in (0, 25) and color != self.color and len(self.pieces) > 1
 
-    def len(self):
-        return len(self._pieces)
+    def count(self, color=None):
+        if color is not None:
+            return len(list(piece for piece in self.pieces if piece.color == color))
+        else:
+            return len(self.pieces)
 
     @property
     def pieces(self):
