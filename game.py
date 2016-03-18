@@ -1,5 +1,7 @@
 import sys
 import json
+import numpy as np
+import itertools
 
 from player import Player
 from board import Board
@@ -97,40 +99,63 @@ class Game(object):
         print(self.board)
         print('{}: {}'.format(self.color, self.roll))
 
-    # TODO: this might be wrong
+    def to_outcome_array(self):
+        homed_white = len(self.board.homed(Player.WHITE))
+        homed_black = len(self.board.homed(Player.BLACK))
+        if homed_white == 15 and homed_black == 0: # gammon
+            return np.array([0, 0, 1, 0], dtype='float')
+        elif homed_black == 15 and homed_white == 0: # gammon
+            return np.array([0, 0, 0, 1], dtype='float')
+        elif homed_white == 15:
+            return np.array([1, 0, 0, 0], dtype='float')
+        elif homed_black == 15: # gammon
+            return np.array([0, 1, 0, 0], dtype='float')
+
     @staticmethod
-    def _all_choices(brd, roll, color, path):
+    def _all_choices(board, roll, color, path):
         direction = 1 if color == Player.WHITE else -1
         min_point = 1
         max_point = 24
-
-        if brd.jailed(color):
-            points = [brd.jail(color)]
+        last_checkers_position = board.last_checkers_position(color)
+        biggest_distance_to_home = last_checkers_position if color == Player.BLACK else (25-last_checkers_position)
+        if biggest_distance_to_home == 25:
+            points = [board.jail(color)]
         else:
-            points = filter(lambda pt: pt.color == color and pt.pieces, brd.points)
-            if brd.can_go_home(color):
+            points = filter(lambda pt: pt.color == color, board.points)
+            if biggest_distance_to_home <= 6:
                 if color == Player.BLACK:
                     min_point -= 1
                 else:
                     max_point += 1
-
         for src in [pt.num for pt in points]:
-            moves = []
-
-            for hop in sorted(set(roll.dies)):
-                dst = src + (direction * hop)
-                if dst >= min_point and dst <= max_point and not brd.points[dst].blocked(color):
-                    moves.append(dst)
+            moves = set()
+            for die in sorted(set(roll.dies)):
+                dst = src + (direction * die)
+                if min_point <= dst <= max_point and not board.points[dst].blocked(color):
+                    moves.add((dst,die))
+            if not moves and roll.dies and \
+                            biggest_distance_to_home <= 6 and \
+                            max(roll.dies) > biggest_distance_to_home and \
+                            src == last_checkers_position:
+                moves.add((src + (direction * max(roll.dies)), max(roll.dies)))
 
             if not moves:
                 yield path
-
-            for dst in moves:
+            for dst, die in moves:
                 used_roll = roll.copy()
-                used_roll.use(abs(dst - src))
-
-                for i in Game._all_choices(brd.move(src, dst), used_roll, color, path + ((src,dst),)):
-                    yield i
+                used_roll.use(die)
+                # print("SRC: {:<10} DST: {:<10} DIES: {:<10} PATH: {}".format(src, dst, used_roll.dies, path))
+                try:
+                    next_board = board.move(src, dst)
+                except AssertionError as e:
+                    print(src,dst)
+                    print(board.__str__())
+                    raise e
+                if next_board.finished():
+                    yield path + ((src,dst),)
+                else:
+                    for i in Game._all_choices(next_board, used_roll, color, path + ((src,dst),)):
+                        yield i
 
     def all_choices(self):
         """
@@ -141,5 +166,7 @@ class Game(object):
         for path in Game._all_choices(self.board, self.roll, self.color, ()):
             if len(path) > min_moves:
                 min_moves = len(path)
+            if any(p in paths for p in itertools.permutations(path, min_moves)):
+                continue
             paths.add(path)
-        return sorted(i for i in paths if len(i) >= min_moves)
+        return filter(lambda p : len(p) == min_moves, paths)
