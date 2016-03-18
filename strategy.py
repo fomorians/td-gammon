@@ -42,7 +42,7 @@ def aggressive_strategy(color, board):
     """
     A strategy that highly favors boards with opponent pieces in jail.
     """
-    return simply_weighted(aggressive.weights, color, board)
+    return simply_weighted(aggressive_strategy.weights, color, board)
 
 aggressive_strategy.weights = Weights(
     jailed = 5,
@@ -56,7 +56,7 @@ def safe_strategy(color, board):
     """
     A strategy that highly penalizes exposed pieces.
     """
-    return simply_weighted(safe.weights, color, board)
+    return simply_weighted(safe_strategy.weights, color, board)
 
 safe_strategy.weights = Weights(
     jailed = 1,
