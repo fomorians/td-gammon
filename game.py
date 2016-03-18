@@ -102,14 +102,14 @@ class Game(object):
     def to_outcome_array(self):
         homed_white = len(self.board.homed(Player.WHITE))
         homed_black = len(self.board.homed(Player.BLACK))
-        if homed_white == 15 and homed_black == 0: # gammon
+        if homed_white == 15 and homed_black == 0: # gammon white
             return np.array([0, 0, 1, 0], dtype='float')
-        elif homed_black == 15 and homed_white == 0: # gammon
+        elif homed_black == 15 and homed_white == 0: # gammon black
             return np.array([0, 0, 0, 1], dtype='float')
         elif homed_white == 15:
-            return np.array([1, 0, 0, 0], dtype='float')
+            return np.array([1, 0, 0, 0], dtype='float') # win white
         elif homed_black == 15: # gammon
-            return np.array([0, 1, 0, 0], dtype='float')
+            return np.array([0, 1, 0, 0], dtype='float') # win black
 
     @staticmethod
     def _all_choices(board, roll, color, path):
