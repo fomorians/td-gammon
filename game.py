@@ -97,28 +97,6 @@ class Game(object):
         print(self.board)
         print('{}: {}'.format(self.color, self.roll))
 
-    def save(self, path):
-        """
-        Serialize the history to given path.
-        """
-        with open(path, mode='w', encoding='utf-8') as f:
-            json.dump(self.history, f, default=Turn.to_json)
-
-    def load(self, path):
-        """
-        Reset the board and load history from given path.
-        """
-        with open(path, mode='r', encoding='utf-8') as f:
-            history = json.load(f, object_hook=Turn.from_json)
-
-        board = Board()
-        for turn in history:
-            for src, dst in turn.moves:
-                board = board.move(src, dst)
-
-        self.board = board
-        self.history = history
-
     # TODO: this might be wrong
     @staticmethod
     def _all_choices(brd, roll, color, path):

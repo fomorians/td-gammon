@@ -75,30 +75,3 @@ class Roll(object):
                 raise ValueError('impossible move')
 
         self._dies = tuple(working)
-
-    def unuse(self, move):
-        """
-        Mark dies as unused for given move - useful for undo or automated tests.
-        """
-
-        # assert die in (self.d1, self.d2), 'die not part of this roll'
-        working = list(self.dies)
-        if move in (self.d1, self.d2):
-            if move == self.d2:
-                working.append(move)
-            else:
-                working.insert(0, move)
-        else:
-            # Whether doubles or not, will need at least two dies to satisfy this move.
-            working.extend([self.d1, self.d2])
-            move -= self.d1 + self.d2
-            while move > 0:
-                # Should only get here when there are doubles.  Unuse
-                # a die until the move is satisfied
-                working.append(self.d1)
-                move -= self.d1
-
-            if move != 0 or len(working) > 4:
-                raise ValueError('impossible to unuse')
-
-        self._dies = tuple(working)
