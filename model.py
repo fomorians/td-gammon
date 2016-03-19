@@ -36,7 +36,7 @@ def dense_layer(x, input_size, output_size, activation, name):
         return activation(tf.matmul(x, W) + b)
 
 class Model(object):
-    def __init__(self):
+    def __init__(self, restore=False):
         self.sess = tf.Session()
         self.graph = tf.Graph()
 
@@ -51,9 +51,9 @@ class Model(object):
         self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, 'layer2')
 
         # sigma = r + gamma * V(s') - V(s)
-        sigma_op = self.Y_next - self.Y
-        loss_op = self.get_loss_op(sigma_op)
-        self.train_op = self.get_train_op(loss_op)
+        self.sigma_op = self.Y_next - self.Y
+        self.loss_op = self.get_loss_op(self.sigma_op)
+        self.train_op = self.get_train_op(self.loss_op)
 
         self.summaries = tf.merge_all_summaries()
         self.saver = tf.train.Saver(max_to_keep=1)
@@ -71,6 +71,7 @@ class Model(object):
         return loss_op
 
     def get_train_op(self, loss_op):
+        # TODO: this is actually wrong but I _want_ it to work because its easier ;)
         lr = 1e-1
         optimizer = tf.train.GradientDescentOptimizer(lr)
         grads_and_vars = optimizer.compute_gradients(loss_op)
@@ -127,9 +128,15 @@ class Model(object):
             else:
                 wins_rand += 1
 
-            print('[{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
+            if wins_rand > 0:
+                print('TEST GAME => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
+            else:
+                print('TEST GAME => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td, wins_td, wins_rand))
 
-        print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
+        if wins_rand > 0:
+            print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
+        else:
+            print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td, wins_td, wins_rand))
 
     def train(self):
         self.sess.run(tf.initialize_all_variables())
@@ -168,13 +175,14 @@ class Model(object):
                 global_step += 1
                 step += 1
 
-            print('END => [{0}]'.format(episode))
             x = game.board.to_array()
-            _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
+            loss, _, summaries = self.sess.run([self.loss_op, self.train_op, self.summaries], feed_dict={
                 self.x: x,
                 self.Y_next: game.to_outcome_array()
             })
             summary_writer.add_summary(summaries, global_step)
+
+            print('GAME LOSS => [{0}] Loss: {1}'.format(episode, loss))
 
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 

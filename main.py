@@ -16,11 +16,12 @@ flags.DEFINE_boolean('play', False, 'If true, play against the trained model.')
 flags.DEFINE_boolean('test', False, 'If true, test against a random strategy.')
 
 if __name__ == '__main__':
-    model = Model()
-
     if FLAGS.play:
+        model = Model(restore=True)
         model.play()
     elif FLAGS.test:
+        model = Model(restore=True)
         model.test()
     else:
+        model = Model(restore=False)
         model.train()
