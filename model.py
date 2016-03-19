@@ -69,9 +69,10 @@ class Model(object):
             trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
 
             # e-> = lambda * e-> + <grad w.r.t output>
-            lm = 0.9
-            update_trace_op = trace.assign(lm * trace + grad, 'update_trace')
-            traces_and_vars.append((update_trace_op, var))
+            with tf.variable_scope('update_trace'):
+                lm = 0.9
+                update_trace_op = trace.assign(lm * trace + grad)
+                traces_and_vars.append((update_trace_op, var))
 
             tf.histogram_summary(var.op.name, var)
             tf.histogram_summary(var.op.name + '/eligibility_traces', trace)
