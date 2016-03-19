@@ -55,7 +55,7 @@ class Model(object):
         self.saver = tf.train.Saver(max_to_keep=1)
 
     def get_loss_op(self, sigma_op):
-        loss_op = tf.reduce_sum(tf.square(sigma_op), name='loss')
+        loss_op = tf.reduce_mean(tf.square(sigma_op), name='loss')
         loss_summary = tf.scalar_summary('loss', loss_op)
         return loss_op
 
