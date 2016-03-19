@@ -1,4 +1,5 @@
 import os
+import time
 import tensorflow as tf
 
 from functools import partial, reduce
@@ -10,16 +11,17 @@ from strategy import td_gammon_strategy, random_strategy
 
 model_path = os.environ.get('MODEL_PATH', 'models/')
 checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
-summary_path = os.environ.get('SUMMARY_PATH', 'logs/')
+summary_path = os.environ.get('SUMMARY_PATH', 'logs/{0}'.format(int(time.time())))
 
 def weight_bias(input_size, output_size):
     W = tf.Variable(tf.truncated_normal([input_size, output_size], stddev=0.1), name='weight')
     b = tf.Variable(tf.constant(0.1, shape=[output_size]), name='bias')
     return W, b
 
-def dense_layer(x, input_size, output_size, activation):
-    W, b = weight_bias(input_size, output_size)
-    return activation(tf.matmul(x, W) + b)
+def dense_layer(x, input_size, output_size, activation, name):
+    with tf.variable_scope(name):
+        W, b = weight_bias(input_size, output_size)
+        return activation(tf.matmul(x, W) + b)
 
 class Model(object):
     def __init__(self):
@@ -33,8 +35,8 @@ class Model(object):
         self.x = tf.placeholder("float", [1, input_layer_size])
         self.Y_next = tf.placeholder("float", [1, output_layer_size])
 
-        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.nn.sigmoid)
-        self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid)
+        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.nn.relu, 'layer1')
+        self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, 'layer2')
 
         # sigma = r + gamma * V(s') - V(s)
         loss_op = self.get_loss_op(self.Y_next - self.Y)
@@ -44,8 +46,8 @@ class Model(object):
         self.saver = tf.train.Saver(max_to_keep=1)
 
     def get_loss_op(self, sigma_op):
-        loss_op = tf.reduce_sum(tf.square(sigma_op))
-        loss_summary = tf.scalar_summary("loss", loss_op)
+        loss_op = tf.reduce_sum(tf.square(sigma_op), name='loss')
+        loss_summary = tf.scalar_summary('loss', loss_op)
         return loss_op
 
     def get_train_op(self, loss_op):
@@ -58,7 +60,7 @@ class Model(object):
             trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False)
 
             # e-> = lambda * e-> + <grad w.r.t output>
-            lm = 0.99
+            lm = 0.9
             trace_op = trace.assign(lm * trace + grad)
             traces_and_vars.append((trace_op, var))
 
@@ -94,10 +96,11 @@ class Model(object):
 
         global_step = 0
         episodes = 100
+
         for episode in range(episodes):
             game = Game(white, black)
-
             step = 0
+
             while not game.board.finished():
                 print('Episode: {0}, Step: {1}, Global Step: {2}'.format(episode, step, global_step))
 
@@ -114,8 +117,8 @@ class Model(object):
                 })
                 summary_writer.add_summary(summaries, global_step)
 
-                step += 1
                 global_step += 1
+                step += 1
 
             print('END => Episode: {0}, Step: {1}, Global Step: {2}'.format(episode, step, global_step))
             x = game.board.to_array()
@@ -124,5 +127,7 @@ class Model(object):
                 self.Y_next: game.to_outcome_array()
             })
             summary_writer.add_summary(summaries, global_step)
+
+            self.saver.save(self.sess, 'td_gammon', global_step=global_step)
 
         summary_writer.close()
