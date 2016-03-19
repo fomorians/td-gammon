@@ -22,7 +22,7 @@ def dense_layer(x, input_size, output_size, activation):
     return activation(tf.matmul(x, W) + b)
 
 class Model(object):
-    def __init__(self, restore=False):
+    def __init__(self):
         self.sess = tf.Session()
         self.graph = tf.Graph()
 
@@ -36,53 +36,50 @@ class Model(object):
         prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.nn.sigmoid)
         self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid)
 
-        # column vector of eligibility traces, one for each component of theta
-        self.e1 = tf.Variable(tf.zeros([hidden_layer_size]))
-        self.e2 = tf.Variable(tf.zeros([output_layer_size]))
-
         # sigma = r + gamma * V(s') - V(s)
         loss_op = self.get_loss_op(self.Y_next - self.Y)
         self.train_op = self.get_train_op(loss_op)
-
-        if restore:
-            self.sess.run(tf.initialize_all_variables())
-
-            latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
-            if latest_checkpoint_path:
-                saver.restore(self.sess, latest_checkpoint_path)
 
         self.summaries = tf.merge_all_summaries()
         self.saver = tf.train.Saver(max_to_keep=1)
 
     def get_loss_op(self, sigma_op):
-        loss_op = -tf.reduce_sum(sigma_op)
+        loss_op = tf.reduce_sum(tf.square(sigma_op))
         loss_summary = tf.scalar_summary("loss", loss_op)
         return loss_op
 
     def get_train_op(self, loss_op):
         lr = 1e-2
         optimizer = tf.train.GradientDescentOptimizer(lr)
-        gradients = optimizer.compute_gradients(loss_op)
+        grads_and_vars = optimizer.compute_gradients(loss_op)
 
-        for grad, var in gradients:
+        traces_and_vars = []
+        for grad, var in grads_and_vars:
+            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False)
+
+            # e-> = lambda * e-> + <grad w.r.t output>
+            lm = 0.99
+            trace_op = trace.assign(lm * trace + grad)
+            traces_and_vars.append((trace_op, var))
+
             tf.histogram_summary(var.op.name, var)
-            if grad:
-                tf.histogram_summary(var.op.name + '/gradients', grad)
-
-        # TODO: update eligibility traces
-        # e-> = lambda * e-> + <grad w.r.t output>
-
-        # lm = 0.99
-        # self.e1.assign(lm * self.e1 + gradients)
-        # self.e2.assign(lm * self.e2 + gradients)
+            tf.histogram_summary(var.op.name + '/eligibility_traces', trace)
+            tf.histogram_summary(var.op.name + '/gradients', grad)
 
         # apply gradients
-        return optimizer.apply_gradients(gradients)
+        return optimizer.apply_gradients(traces_and_vars)
 
     def get_output(self, board):
         return self.sess.run(self.Y, feed_dict={
             self.x: board.to_array()
         })
+
+    def restore(self):
+        self.sess.run(tf.initialize_all_variables())
+
+        latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
+        if latest_checkpoint_path:
+            saver.restore(self.sess, latest_checkpoint_path)
 
     def train(self):
         self.sess.run(tf.initialize_all_variables())

@@ -15,7 +15,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean('play', False, 'If true, play against the trained model.')
 
 def play():
-    model = Model(restore=True)
+    model = Model()
+    model.restore()
+
     strategy = partial(td_gammon_strategy, model)
 
     white = PlayerStrategy(Player.WHITE, strategy)
