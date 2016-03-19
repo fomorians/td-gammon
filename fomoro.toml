@@ -1,0 +1,4 @@
+name = "td-gammon"
+repo = "https://github.com/jimfleming/td-gammon.git"
+description = "Modern implementation of TD-Gammon"
+environment = "tensorflow"
