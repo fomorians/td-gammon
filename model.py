@@ -13,6 +13,15 @@ model_path = os.environ.get('MODEL_PATH', 'models/')
 checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
 summary_path = os.environ.get('SUMMARY_PATH', 'logs/{0}'.format(int(time.time())))
 
+if not os.path.exists(model_path):
+    os.makedirs(model_path)
+
+if not os.path.exists(checkpoint_path):
+    os.makedirs(checkpoint_path)
+
+if not os.path.exists(summary_path):
+    os.makedirs(summary_path)
+
 def weight_bias(input_size, output_size):
     W = tf.Variable(tf.truncated_normal([input_size, output_size], stddev=0.1), name='weight')
     b = tf.Variable(tf.constant(0.1, shape=[output_size]), name='bias')
@@ -29,7 +38,7 @@ class Model(object):
         self.graph = tf.Graph()
 
         input_layer_size = 476
-        hidden_layer_size = 40 # use ~71 for fully-connected (plain) layers, 50 for highway layers
+        hidden_layer_size = 120
         output_layer_size = 4
 
         self.x = tf.placeholder("float", [1, input_layer_size])
@@ -57,12 +66,12 @@ class Model(object):
 
         traces_and_vars = []
         for grad, var in grads_and_vars:
-            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False)
+            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
 
             # e-> = lambda * e-> + <grad w.r.t output>
             lm = 0.9
-            trace_op = trace.assign(lm * trace + grad)
-            traces_and_vars.append((trace_op, var))
+            update_trace_op = trace.assign(lm * trace + grad, 'update_trace')
+            traces_and_vars.append((update_trace_op, var))
 
             tf.histogram_summary(var.op.name, var)
             tf.histogram_summary(var.op.name + '/eligibility_traces', trace)
@@ -159,6 +168,6 @@ class Model(object):
             })
             summary_writer.add_summary(summaries, global_step)
 
-            self.saver.save(self.sess, 'td_gammon', global_step=global_step)
+            self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
