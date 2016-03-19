@@ -83,16 +83,47 @@ class Model(object):
         if latest_checkpoint_path:
             saver.restore(self.sess, latest_checkpoint_path)
 
+    def test(self):
+        self.sess.run(tf.initialize_all_variables())
+
+        latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
+        if latest_checkpoint_path:
+            saver.restore(self.sess, latest_checkpoint_path)
+
+        white = PlayerStrategy(Player.WHITE, partial(td_gammon_strategy, self))
+        black = PlayerStrategy(Player.BLACK, random_strategy)
+
+        global_step = 0
+        episodes = 100
+
+        wins_white = 0 # TD-gammon
+        wins_black = 0 # random
+
+        for episode in range(episodes):
+            game = Game(white, black)
+            step = 0
+
+            while not game.board.finished():
+                game.next(draw_board=False)
+                global_step += 1
+                step += 1
+
+            if game.winner == Player.WHITE:
+                wins_white += 1
+            else:
+                wins_black += 1
+
+            print('[{0}] Wins TD: {1}, Wins Random: {2}'.format(episode, wins_white, wins_black))
+
     def train(self):
         self.sess.run(tf.initialize_all_variables())
 
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
         summary_writer = tf.train.SummaryWriter(summary_path, self.sess.graph_def)
 
-        # strategy = partial(td_gammon, self)
-        strategy = random_strategy
-        white = PlayerStrategy(Player.WHITE, strategy)
-        black = PlayerStrategy(Player.BLACK, strategy)
+        model_strategy = partial(td_gammon_strategy, self)
+        white = PlayerStrategy(Player.WHITE, model_strategy)
+        black = PlayerStrategy(Player.BLACK, model_strategy)
 
         global_step = 0
         episodes = 100

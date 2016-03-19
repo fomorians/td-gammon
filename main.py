@@ -13,6 +13,7 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('play', False, 'If true, play against the trained model.')
+flags.DEFINE_boolean('test', False, 'If true, test against a random strategy.')
 
 def play():
     model = Model()
@@ -26,6 +27,10 @@ def play():
     game = Game(white, black)
     game.play()
 
+def test():
+    model = Model()
+    model.test()
+
 def train():
     model = Model()
     model.train()
@@ -33,5 +38,7 @@ def train():
 if __name__ == '__main__':
     if FLAGS.play:
         play()
+    elif FLAGS.test:
+        test()
     else:
         train()
