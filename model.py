@@ -1,5 +1,8 @@
+from __future__ import division
+
 import os
 import time
+import random
 import tensorflow as tf
 
 from functools import partial, reduce
@@ -61,7 +64,7 @@ class Model(object):
         return loss_op
 
     def get_train_op(self, loss_op):
-        lr = 1e-2
+        lr = 1e-1
         optimizer = tf.train.GradientDescentOptimizer(lr)
         grads_and_vars = optimizer.compute_gradients(loss_op)
 
@@ -72,7 +75,7 @@ class Model(object):
 
             # e-> = lambda * e-> + <grad of output w.r.t weights>
             with tf.variable_scope('update_trace'):
-                lm = 0.9
+                lm = 0.7
                 update_trace_op = trace.assign(lm * trace + grad)
                 traces_and_vars.append((update_trace_op, var))
 
@@ -95,37 +98,29 @@ class Model(object):
         if latest_checkpoint_path:
             self.saver.restore(self.sess, latest_checkpoint_path)
 
-    def test(self):
-        self.sess.run(tf.initialize_all_variables())
+    def test(self, episodes=100):
+        wins_td = 0 # TD-gammon
+        wins_rand = 0 # random
 
-        latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
-        if latest_checkpoint_path:
-            self.saver.restore(self.sess, latest_checkpoint_path)
-
-        white = PlayerStrategy(Player.WHITE, partial(td_gammon_strategy, self))
-        black = PlayerStrategy(Player.BLACK, random_strategy)
-
-        global_step = 0
-        episodes = 100
-
-        wins_white = 0 # TD-gammon
-        wins_black = 0 # random
+        player_td = PlayerStrategy(Player.WHITE, partial(td_gammon_strategy, self))
+        player_gammon = PlayerStrategy(Player.BLACK, random_strategy)
 
         for episode in range(episodes):
+            white, black = random.sample([player_td, player_gammon], 2)
             game = Game(white, black)
-            step = 0
 
             while not game.board.finished():
                 game.next(draw_board=False)
-                global_step += 1
-                step += 1
 
-            if game.winner == Player.WHITE:
-                wins_white += 1
+            if (game.winner == Player.WHITE and game.white == player_td) \
+            or (game.winner == Player.BLACK and game.black == player_td):
+                wins_td += 1
             else:
-                wins_black += 1
+                wins_rand += 1
 
-            print('[{0}] Wins TD: {1}, Wins Random: {2}'.format(episode, wins_white, wins_black))
+            print('[{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
+
+        print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
 
     def train(self):
         self.sess.run(tf.initialize_all_variables())
@@ -138,11 +133,14 @@ class Model(object):
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         global_step = 0
-        episodes = 100
+        episodes = 1000
 
         for episode in range(episodes):
             game = Game(white, black)
             step = 0
+
+            if episode % 100 == 0:
+                self.test(episodes=10)
 
             while not game.board.finished():
                 print('Episode: {0}, Step: {1}, Global Step: {2}'.format(episode, step, global_step))
@@ -163,7 +161,7 @@ class Model(object):
                 global_step += 1
                 step += 1
 
-            print('END => Episode: {0}, Step: {1}, Global Step: {2}'.format(episode, step, global_step))
+            print('END => [{0}]'.format(episode))
             x = game.board.to_array()
             _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
                 self.x: x,
@@ -174,3 +172,5 @@ class Model(object):
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
+
+        self.test(episodes=100)

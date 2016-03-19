@@ -29,12 +29,12 @@ def play():
 
 def test():
     model = Model()
+    model.restore()
     model.test()
 
 def train():
     model = Model()
     model.train()
-    model.test()
 
 if __name__ == '__main__':
     if FLAGS.play:
