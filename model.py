@@ -69,7 +69,7 @@ class Model(object):
         for grad, var in grads_and_vars:
             trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
 
-            # e-> = lambda * e-> + <grad w.r.t output>
+            # e-> = lambda * e-> + <grad of output w.r.t weights>
             with tf.variable_scope('update_trace'):
                 lm = 0.9
                 update_trace_op = trace.assign(lm * trace + grad)
