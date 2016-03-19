@@ -7,14 +7,16 @@ class PlayerHuman(Player):
     A human player using text-based console to interact with the game.
     """
 
-    def interact(self, game):
+    def interact(self, game, draw_board=True):
         print('move <start-position> <end-position>\tmake a move')
         print('save <path>\t\t\t\tsave the game')
         print('load <path>\t\t\t\tload a saved game')
         print('stop\t\t\t\t\tstop the game')
 
         while game.roll.dies:
-            game.draw()
+            if draw_board:
+                game.draw()
+
             try:
                 cmd = self.get_command(game)
                 cmd()

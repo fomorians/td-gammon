@@ -5,5 +5,5 @@ class Player(object):
     """
     Interact with a board given a color & strategy.
     """
-    def interact(self, game):
+    def interact(self, game, draw_board=True):
         raise ValueError("need to implement interact(): {}".format(self))

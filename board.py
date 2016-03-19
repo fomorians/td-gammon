@@ -129,6 +129,11 @@ class Board(object):
         """
         board = self.copy()
 
+        if dst < 0:
+            dst = 0
+        elif dst > 25:
+            dst = 25
+
         assert src >= 0 and src <= 25, 'valid points are [0..25]'
         assert dst >= 0 and dst <= 25, 'valid points are [0..25]'
 

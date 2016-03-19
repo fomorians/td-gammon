@@ -11,7 +11,7 @@ class PlayerStrategy(Player):
         self.color = color
         self.score = partial(strategy, color)
 
-    def interact(self, game):
+    def interact(self, game, draw_board=True):
         """
         Make optimal move by enumerating all possible board positions.
         """
@@ -25,5 +25,6 @@ class PlayerStrategy(Player):
                 best_moves = moves
 
         for move in best_moves:
-            game.draw()
+            if draw_board:
+                game.draw()
             game.move(*move)

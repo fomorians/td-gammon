@@ -51,17 +51,17 @@ class Game(object):
     def winner(self):
         return Player.WHITE if len(self.board.homed(Player.WHITE)) == 15 else Player.BLACK
 
-    def play(self):
+    def play(self, draw_board=True):
         """
         The main game loop.
         """
         while not self.board.finished():
-            self.next()
+            self.next(draw_board)
 
-    def next(self):
+    def next(self, draw_board=True):
         self.roll_dice()
         player = self.white if self.color == Player.WHITE else self.black
-        player.interact(self)
+        player.interact(self, draw_board=draw_board)
 
     def stop(self):
         sys.exit('Game stopped')
@@ -78,10 +78,13 @@ class Game(object):
         * Mark the move as used in the roll.
         * Capture move in this game's history.
         """
-        assert(src >= 0 and src <= 25)
-        assert(dst >= 0 and dst <= 25)
-
         dies = abs(dst - src)
+
+        if dst < 0:
+            dst = 0
+        elif dst > 25:
+            dst = 25
+
         new = self.board.move(src, dst)
         self.roll.use(dies)
         self.moves.append((src, dst))
@@ -103,13 +106,13 @@ class Game(object):
         homed_white = len(self.board.homed(Player.WHITE))
         homed_black = len(self.board.homed(Player.BLACK))
         if homed_white == 15 and homed_black == 0: # gammon white
-            return np.array([0, 0, 1, 0], dtype='float')
+            return np.array([[0, 0, 1, 0]], dtype='float')
         elif homed_black == 15 and homed_white == 0: # gammon black
-            return np.array([0, 0, 0, 1], dtype='float')
+            return np.array([[0, 0, 0, 1]], dtype='float')
         elif homed_white == 15:
-            return np.array([1, 0, 0, 0], dtype='float') # win white
+            return np.array([[1, 0, 0, 0]], dtype='float') # win white
         elif homed_black == 15: # gammon
-            return np.array([0, 1, 0, 0], dtype='float') # win black
+            return np.array([[0, 1, 0, 0]], dtype='float') # win black
 
     @staticmethod
     def _all_choices(board, roll, color, path):
@@ -117,7 +120,8 @@ class Game(object):
         min_point = 1
         max_point = 24
         last_checkers_position = board.last_checkers_position(color)
-        biggest_distance_to_home = last_checkers_position if color == Player.BLACK else (25-last_checkers_position)
+        biggest_distance_to_home = last_checkers_position if color == Player.BLACK else (25 - last_checkers_position)
+
         if biggest_distance_to_home == 25:
             points = [board.jail(color)]
         else:
@@ -127,6 +131,7 @@ class Game(object):
                     min_point -= 1
                 else:
                     max_point += 1
+
         for src in [pt.num for pt in points]:
             moves = set()
             for die in sorted(set(roll.dies)):
@@ -141,14 +146,14 @@ class Game(object):
 
             if not moves:
                 yield path
+
             for dst, die in moves:
                 used_roll = roll.copy()
                 used_roll.use(die)
-                # print("SRC: {:<10} DST: {:<10} DIES: {:<10} PATH: {}".format(src, dst, used_roll.dies, path))
                 try:
                     next_board = board.move(src, dst)
                 except AssertionError as e:
-                    print(src,dst)
+                    print(src, dst)
                     print(board.__str__())
                     raise e
                 if next_board.finished():
