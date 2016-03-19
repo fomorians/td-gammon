@@ -58,6 +58,13 @@ class Model(object):
         self.summaries = tf.merge_all_summaries()
         self.saver = tf.train.Saver(max_to_keep=1)
 
+        self.sess.run(tf.initialize_all_variables())
+
+        if restore:
+            latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
+            if latest_checkpoint_path:
+                self.saver.restore(self.sess, latest_checkpoint_path)
+
     def get_loss_op(self, sigma_op):
         loss_op = tf.reduce_mean(tf.square(sigma_op), name='loss')
         loss_summary = tf.scalar_summary('loss', loss_op)
@@ -91,12 +98,14 @@ class Model(object):
             self.x: board.to_array()
         })
 
-    def restore(self):
-        self.sess.run(tf.initialize_all_variables())
+    def play(self):
+        strategy = partial(td_gammon_strategy, self)
 
-        latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
-        if latest_checkpoint_path:
-            self.saver.restore(self.sess, latest_checkpoint_path)
+        white = PlayerStrategy(Player.WHITE, strategy)
+        black = PlayerHuman()
+
+        game = Game(white, black)
+        game.play()
 
     def test(self, episodes=100):
         wins_td = 0 # TD-gammon
@@ -143,8 +152,6 @@ class Model(object):
                 self.test(episodes=10)
 
             while not game.board.finished():
-                print('Episode: {0}, Step: {1}, Global Step: {2}'.format(episode, step, global_step))
-
                 x = game.board.to_array()
 
                 game.next(draw_board=False)

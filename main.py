@@ -15,31 +15,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean('play', False, 'If true, play against the trained model.')
 flags.DEFINE_boolean('test', False, 'If true, test against a random strategy.')
 
-def play():
-    model = Model()
-    model.restore()
-
-    strategy = partial(td_gammon_strategy, model)
-
-    white = PlayerStrategy(Player.WHITE, strategy)
-    black = PlayerHuman()
-
-    game = Game(white, black)
-    game.play()
-
-def test():
-    model = Model()
-    model.restore()
-    model.test()
-
-def train():
-    model = Model()
-    model.train()
-
 if __name__ == '__main__':
+    model = Model()
+
     if FLAGS.play:
-        play()
+        model.play()
     elif FLAGS.test:
-        test()
+        model.test()
     else:
-        train()
+        model.train()
