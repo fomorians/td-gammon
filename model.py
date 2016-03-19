@@ -44,11 +44,12 @@ class Model(object):
         self.x = tf.placeholder("float", [1, input_layer_size])
         self.Y_next = tf.placeholder("float", [1, output_layer_size])
 
-        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.nn.relu, 'layer1')
+        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, 'layer1')
         self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, 'layer2')
 
         # sigma = r + gamma * V(s') - V(s)
-        loss_op = self.get_loss_op(self.Y_next - self.Y)
+        sigma_op = self.Y_next - self.Y
+        loss_op = self.get_loss_op(sigma_op)
         self.train_op = self.get_train_op(loss_op)
 
         self.summaries = tf.merge_all_summaries()
@@ -92,14 +93,14 @@ class Model(object):
 
         latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
         if latest_checkpoint_path:
-            saver.restore(self.sess, latest_checkpoint_path)
+            self.saver.restore(self.sess, latest_checkpoint_path)
 
     def test(self):
         self.sess.run(tf.initialize_all_variables())
 
         latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
         if latest_checkpoint_path:
-            saver.restore(self.sess, latest_checkpoint_path)
+            self.saver.restore(self.sess, latest_checkpoint_path)
 
         white = PlayerStrategy(Player.WHITE, partial(td_gammon_strategy, self))
         black = PlayerStrategy(Player.BLACK, random_strategy)
