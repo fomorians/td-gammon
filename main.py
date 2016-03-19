@@ -34,6 +34,7 @@ def test():
 def train():
     model = Model()
     model.train()
+    model.test()
 
 if __name__ == '__main__':
     if FLAGS.play:

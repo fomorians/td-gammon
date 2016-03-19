@@ -64,6 +64,7 @@ class Model(object):
         optimizer = tf.train.GradientDescentOptimizer(lr)
         grads_and_vars = optimizer.compute_gradients(loss_op)
 
+        # from the computed gradients we setup eligibility traces
         traces_and_vars = []
         for grad, var in grads_and_vars:
             trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
