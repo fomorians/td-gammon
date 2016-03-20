@@ -73,7 +73,7 @@ class Model(object):
         loss_op = tf.reduce_mean(tf.square(sigma_op), name='loss')
         tf.scalar_summary('loss', loss_op)
 
-        moving_average = tf.train.ExponentialMovingAverage(decay=0.25)
+        moving_average = tf.train.ExponentialMovingAverage(decay=0.5)
         moving_average_op = moving_average.apply([loss_op])
         tf.scalar_summary('loss_average', moving_average.average(loss_op))
 
