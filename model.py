@@ -86,7 +86,7 @@ class Model(object):
             trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
 
             # e-> = lm * e-> + <grad of output w.r.t weights>
-            trace_op = trace.assign(lm * trace + grad)
+            trace_op = tf.reduce_sum(sigma_op) * trace.assign(lm * trace + grad)
             new_grads_and_vars.append((trace_op, var))
 
             tf.histogram_summary(var.op.name, var)
