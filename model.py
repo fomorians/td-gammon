@@ -50,6 +50,9 @@ class Model(object):
         prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
         self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
+        tf.scalar_summary("Y_next_sum", tf.reduce_sum(self.Y_next))
+        tf.scalar_summary("Y_sum", tf.reduce_sum(self.Y))
+
         tf.histogram_summary(self.Y_next.name, self.Y_next)
         tf.histogram_summary(self.Y.name, self.Y)
 
@@ -160,8 +163,8 @@ class Model(object):
         episodes = 200000
 
         for episode in range(episodes):
-            if episode % test_interval == 0:
-                self.test()
+            # if episode % test_interval == 0:
+            #     self.test()
 
             game = Game(white, black)
             step = 0
