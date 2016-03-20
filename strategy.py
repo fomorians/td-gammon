@@ -1,4 +1,4 @@
-import random
+import numpy as np
 
 from functools import partial
 from collections import namedtuple
@@ -70,4 +70,8 @@ def random_strategy(color, board):
     """
     A strategy that returns a random score for any board.
     """
-    return random.randint(0, 9)
+    scores = np.random.random([1, 4])
+    if color == Player.WHITE:
+        return max(scores[0][0], scores[0][2])
+    else:
+        return max(scores[0][1], scores[0][3])

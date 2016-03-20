@@ -33,7 +33,7 @@ def weight_bias(input_size, output_size):
 def dense_layer(x, input_size, output_size, activation, name):
     with tf.variable_scope(name):
         W, b = weight_bias(input_size, output_size)
-        return activation(tf.matmul(x, W) + b)
+        return activation(tf.matmul(x, W) + b, name='activation')
 
 class Model(object):
     def __init__(self, restore=False):
@@ -44,11 +44,14 @@ class Model(object):
         hidden_layer_size = 120
         output_layer_size = 4
 
-        self.x = tf.placeholder("float", [1, input_layer_size])
-        self.Y_next = tf.placeholder("float", [1, output_layer_size])
+        self.x = tf.placeholder("float", [1, input_layer_size], name="x")
+        self.Y_next = tf.placeholder("float", [1, output_layer_size], name="Y_next")
 
-        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, 'layer1')
-        self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, 'layer2')
+        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
+        self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
+
+        tf.histogram_summary(self.Y_next.name, self.Y_next)
+        tf.histogram_summary(self.Y.name, self.Y)
 
         self.train_op = self.get_train_op()
 
@@ -73,12 +76,12 @@ class Model(object):
         loss_op = tf.reduce_mean(tf.square(sigma_op), name='loss')
         tf.scalar_summary('loss', loss_op)
 
-        moving_average = tf.train.ExponentialMovingAverage(decay=0.5)
+        moving_average = tf.train.ExponentialMovingAverage(decay=0.99)
         moving_average_op = moving_average.apply([loss_op])
         tf.scalar_summary('loss_average', moving_average.average(loss_op))
 
         optimizer = tf.train.GradientDescentOptimizer(alpha)
-        grads_and_vars = optimizer.compute_gradients(loss_op)
+        grads_and_vars = optimizer.compute_gradients(self.Y)
 
         # from the computed gradients we setup eligibility traces
         new_grads_and_vars = []
@@ -153,9 +156,13 @@ class Model(object):
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         global_step = 0
+        test_interval = 100
         episodes = 200000
 
         for episode in range(episodes):
+            if episode % test_interval == 0:
+                self.test()
+
             game = Game(white, black)
             step = 0
 
@@ -189,4 +196,4 @@ class Model(object):
 
         summary_writer.close()
 
-        self.test(episodes=100)
+        self.test()
