@@ -50,7 +50,7 @@ class Model(object):
         prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, 'layer1')
         self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, 'layer2')
 
-        self.loss_op, self.train_op = self.get_train_op()
+        self.train_op = self.get_train_op()
 
         self.summaries = tf.merge_all_summaries()
         self.saver = tf.train.Saver(max_to_keep=1)
@@ -71,7 +71,11 @@ class Model(object):
 
         sigma_op = reward + gamma * self.Y_next - self.Y
         loss_op = tf.reduce_mean(tf.square(sigma_op), name='loss')
-        loss_summary = tf.scalar_summary('loss', loss_op)
+        tf.scalar_summary('loss', loss_op)
+
+        moving_average = tf.train.ExponentialMovingAverage(decay=0.25)
+        moving_average_op = moving_average.apply([loss_op])
+        tf.scalar_summary('loss_average', moving_average.average(loss_op))
 
         optimizer = tf.train.GradientDescentOptimizer(alpha)
         grads_and_vars = optimizer.compute_gradients(loss_op)
@@ -90,8 +94,9 @@ class Model(object):
             tf.histogram_summary(var.op.name + '/traces', trace_op)
 
         # apply gradients
-        train_op = optimizer.apply_gradients(new_grads_and_vars)
-        return loss_op, train_op
+        with tf.control_dependencies([moving_average_op]):
+            train_op = optimizer.apply_gradients(new_grads_and_vars)
+        return train_op
 
     def get_output(self, board):
         return self.sess.run(self.Y, feed_dict={
@@ -148,14 +153,11 @@ class Model(object):
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         global_step = 0
-        episodes = 1000
+        episodes = 100
 
         for episode in range(episodes):
             game = Game(white, black)
             step = 0
-
-            if episode % 100 == 0:
-                self.test(episodes=10)
 
             while not game.board.finished():
                 x = game.board.to_array()
@@ -175,13 +177,13 @@ class Model(object):
                 step += 1
 
             x = game.board.to_array()
-            loss, _, summaries = self.sess.run([self.loss_op, self.train_op, self.summaries], feed_dict={
+            _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
                 self.x: x,
                 self.Y_next: game.to_outcome_array()
             })
             summary_writer.add_summary(summaries, global_step)
 
-            print('GAME LOSS => [{0}] Loss: {1}'.format(episode, loss))
+            print('GAME => [{0}]'.format(episode))
 
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
