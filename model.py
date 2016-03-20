@@ -153,7 +153,7 @@ class Model(object):
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         global_step = 0
-        episodes = 100
+        episodes = 200000
 
         for episode in range(episodes):
             game = Game(white, black)
