@@ -56,6 +56,8 @@ class Model(object):
         tf.histogram_summary(self.V_next.name, self.V_next)
         tf.histogram_summary(self.V.name, self.V)
 
+        self.loss_op = self.get_loss_op(name='loss')
+        self.loss_end_op = self.get_loss_op(name='loss_end')
         self.train_op = self.get_train_op()
 
         self.summaries = tf.merge_all_summaries()
@@ -67,6 +69,11 @@ class Model(object):
             latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
             if latest_checkpoint_path:
                 self.saver.restore(self.sess, latest_checkpoint_path)
+
+    def get_loss_op(self, name='loss'):
+        loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name=name)
+        loss_summary = tf.scalar_summary(loss_op.name, loss_op)
+        return loss_op
 
     def get_train_op(self):
         alpha = 1e-1
@@ -134,15 +141,11 @@ class Model(object):
             else:
                 wins_rand += 1
 
-            if wins_rand > 0:
-                print('TEST GAME => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
-            else:
-                print('TEST GAME => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td, wins_td, wins_rand))
+            win_ratio = wins_td / wins_rand if wins_rand > 0 else wins_td
+            print('TEST GAME => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, win_ratio, wins_td, wins_rand))
 
-        if wins_rand > 0:
-            print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td / wins_rand, wins_td, wins_rand))
-        else:
-            print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, wins_td, wins_td, wins_rand))
+        win_ratio = wins_td / wins_rand if wins_rand > 0 else wins_td
+        print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, win_ratio, wins_td, wins_rand))
 
     def train(self):
         self.sess.run(tf.initialize_all_variables())
@@ -173,7 +176,11 @@ class Model(object):
                 x_next = game.board.to_array()
                 V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
-                _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
+                _, loss, summaries = self.sess.run([
+                    self.train_op,
+                    self.loss_op,
+                    self.summaries
+                ], feed_dict={
                     self.x: x,
                     self.V_next: V_next
                 })
@@ -183,13 +190,18 @@ class Model(object):
                 step += 1
 
             x = game.board.to_array()
-            _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
+            _, loss, loss_end, summaries = self.sess.run([
+                self.train_op,
+                self.loss_op,
+                self.loss_end_op,
+                self.summaries
+            ], feed_dict={
                 self.x: x,
                 self.V_next: game.to_outcome_array()
             })
             summary_writer.add_summary(summaries, global_step)
 
-            print('GAME => [{0}]'.format(episode))
+            print('GAME => [{0}] Loss: {1}, Loss (End): {2}'.format(episode, loss, loss_end))
 
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
