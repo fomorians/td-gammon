@@ -56,8 +56,7 @@ class Model(object):
         tf.histogram_summary(self.V_next.name, self.V_next)
         tf.histogram_summary(self.V.name, self.V)
 
-        self.loss_op = self.get_loss_op(name='loss')
-        self.loss_end_op = self.get_loss_op(name='loss_end')
+        self.loss_op = self.get_loss_op()
         self.train_op = self.get_train_op()
 
         self.summaries = tf.merge_all_summaries()
@@ -70,14 +69,14 @@ class Model(object):
             if latest_checkpoint_path:
                 self.saver.restore(self.sess, latest_checkpoint_path)
 
-    def get_loss_op(self, name='loss'):
-        loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name=name)
+    def get_loss_op(self):
+        loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         loss_summary = tf.scalar_summary(loss_op.name, loss_op)
         return loss_op
 
     def get_train_op(self):
-        alpha = 1e-1
-        lm = 7e-1
+        alpha = 0.1
+        lm = 0.7
         gamma = 1.0
         reward = 0.0
 
@@ -86,25 +85,25 @@ class Model(object):
 
         # take sum since its a measure of surprise the individual values don't matter
         # gradients above take care of contributions
-        sigma = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, reduction_indices=1)
+        sigma = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, reduction_indices=1, name='sigma')
+        tf.scalar_summary(sigma.name, sigma)
 
         updates = []
         for grad, var in zip(grads, tvars):
-            tf.histogram_summary(var.op.name, var)
-            tf.histogram_summary(var.op.name + '/gradients', grad)
-
             # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
             trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
+
+            tf.histogram_summary(var.op.name, var)
+            tf.histogram_summary(var.op.name + '/gradients', grad)
+            tf.histogram_summary(var.op.name + '/traces', trace)
+
             trace_op = trace.assign(gamma * lm * trace + grad)
+            assign_op = var.assign_add(alpha * sigma * trace_op)
+            updates.append(assign_op)
 
-            with tf.control_dependencies([trace_op]):
-                tf.histogram_summary(var.op.name + '/traces', trace)
-
-                assign_op = var.assign_add(alpha * sigma * trace)
-                updates.append(assign_op)
-
-        # grouped gradient updates
-        train_op = tf.group(*updates)
+        # gradient updates
+        with tf.control_dependencies(updates):
+            train_op = tf.no_op(name="train")
         return train_op
 
     def get_output(self, board):
@@ -190,10 +189,9 @@ class Model(object):
                 step += 1
 
             x = game.board.to_array()
-            _, loss, loss_end, summaries = self.sess.run([
+            _, loss, summaries = self.sess.run([
                 self.train_op,
                 self.loss_op,
-                self.loss_end_op,
                 self.summaries
             ], feed_dict={
                 self.x: x,
@@ -201,7 +199,7 @@ class Model(object):
             })
             summary_writer.add_summary(summaries, global_step)
 
-            print('GAME => [{0}] Loss: {1}, Loss (End): {2}'.format(episode, loss, loss_end))
+            print('GAME => [{0}] Loss: {1}'.format(episode, loss))
 
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
