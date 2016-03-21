@@ -82,7 +82,8 @@ class Model(object):
         sigma = tf.reduce_sum(self.V_next - self.V, name='sigma')
         tf.scalar_summary(sigma.name, sigma)
 
-        loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
+        loss = -tf.reduce_sum(self.V_next * tf.log(self.V), name='loss')
+        # loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         tf.scalar_summary(loss.name, loss)
 
         updates = []
@@ -180,7 +181,8 @@ class Model(object):
 
             z = game.to_outcome_array()
 
-            _, summaries = self.sess.run([
+            v, _, summaries = self.sess.run([
+                self.V,
                 self.train_op,
                 self.summaries
             ], feed_dict={
@@ -189,7 +191,7 @@ class Model(object):
             })
             summary_writer.add_summary(summaries, episode)
 
-            print('GAME => [{0}] {1}'.format(episode, z))
+            print('GAME => [{0}] {1}'.format(episode, v, z))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
