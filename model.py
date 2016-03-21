@@ -45,16 +45,16 @@ class Model(object):
         output_layer_size = 4
 
         self.x = tf.placeholder("float", [1, input_layer_size], name="x")
-        self.Y_next = tf.placeholder("float", [1, output_layer_size], name="Y_next")
+        self.V_next = tf.placeholder("float", [1, output_layer_size], name="V_next")
 
         prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
-        self.Y = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
+        self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
-        tf.scalar_summary("Y_next_sum", tf.reduce_sum(self.Y_next))
-        tf.scalar_summary("Y_sum", tf.reduce_sum(self.Y))
+        tf.scalar_summary("V_next_sum", tf.reduce_sum(self.V_next))
+        tf.scalar_summary("V_sum", tf.reduce_sum(self.V))
 
-        tf.histogram_summary(self.Y_next.name, self.Y_next)
-        tf.histogram_summary(self.Y.name, self.Y)
+        tf.histogram_summary(self.V_next.name, self.V_next)
+        tf.histogram_summary(self.V.name, self.V)
 
         self.train_op = self.get_train_op()
 
@@ -69,43 +69,39 @@ class Model(object):
                 self.saver.restore(self.sess, latest_checkpoint_path)
 
     def get_train_op(self):
-        # TODO: this is actually wrong but I _want_ it to work because its easier ;)
         alpha = 1e-1
         lm = 7e-1
         gamma = 1.0
         reward = 0.0
 
-        sigma_op = reward + gamma * self.Y_next - self.Y
-        loss_op = tf.reduce_mean(tf.square(sigma_op), name='loss')
-        tf.scalar_summary('loss', loss_op)
+        tvars = tf.trainable_variables()
+        grads = tf.gradients(self.V, tvars)
 
-        moving_average = tf.train.ExponentialMovingAverage(decay=0.99)
-        moving_average_op = moving_average.apply([loss_op])
-        tf.scalar_summary('loss_average', moving_average.average(loss_op))
+        # take sum since its a measure of surprise the individual values don't matter
+        # gradients above take care of contributions
+        sigma = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, reduction_indices=1)
 
-        optimizer = tf.train.GradientDescentOptimizer(alpha)
-        grads_and_vars = optimizer.compute_gradients(self.Y)
-
-        # from the computed gradients we setup eligibility traces
-        new_grads_and_vars = []
-        for grad, var in grads_and_vars:
-            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
-
-            # e-> = lm * e-> + <grad of output w.r.t weights>
-            trace_op = tf.reduce_sum(sigma_op) * trace.assign(lm * trace + grad)
-            new_grads_and_vars.append((trace_op, var))
-
+        updates = []
+        for grad, var in zip(grads, tvars):
             tf.histogram_summary(var.op.name, var)
             tf.histogram_summary(var.op.name + '/gradients', grad)
-            tf.histogram_summary(var.op.name + '/traces', trace_op)
 
-        # apply gradients
-        with tf.control_dependencies([moving_average_op]):
-            train_op = optimizer.apply_gradients(new_grads_and_vars)
+            # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
+            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
+            trace_op = trace.assign(gamma * lm * trace + grad)
+
+            with tf.control_dependencies([trace_op]):
+                tf.histogram_summary(var.op.name + '/traces', trace)
+
+                assign_op = var.assign_add(alpha * sigma * trace)
+                updates.append(assign_op)
+
+        # grouped gradient updates
+        train_op = tf.group(*updates)
         return train_op
 
     def get_output(self, board):
-        return self.sess.run(self.Y, feed_dict={
+        return self.sess.run(self.V, feed_dict={
             self.x: board.to_array()
         })
 
@@ -175,11 +171,11 @@ class Model(object):
                 game.next(draw_board=False)
 
                 x_next = game.board.to_array()
-                Y_next = self.sess.run(self.Y, feed_dict={ self.x: x_next })
+                V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
                 _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
                     self.x: x,
-                    self.Y_next: Y_next
+                    self.V_next: V_next
                 })
                 summary_writer.add_summary(summaries, global_step)
 
@@ -189,7 +185,7 @@ class Model(object):
             x = game.board.to_array()
             _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
                 self.x: x,
-                self.Y_next: game.to_outcome_array()
+                self.V_next: game.to_outcome_array()
             })
             summary_writer.add_summary(summaries, global_step)
 
