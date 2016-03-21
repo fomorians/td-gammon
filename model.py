@@ -159,8 +159,8 @@ class Model(object):
         episodes = 200000
 
         for episode in range(episodes):
-            # if episode % test_interval == 0:
-            #     self.test()
+            if episode % test_interval == 0:
+                self.test(episodes=20)
 
             game = Game(white, black)
             step = 0
@@ -195,4 +195,4 @@ class Model(object):
 
         summary_writer.close()
 
-        self.test()
+        self.test(episodes=100)
