@@ -41,7 +41,7 @@ class Model(object):
         self.graph = tf.Graph()
 
         input_layer_size = 476
-        hidden_layer_size = 120
+        hidden_layer_size = 60
         output_layer_size = 4
 
         self.x = tf.placeholder("float", [1, input_layer_size], name="x")
@@ -50,13 +50,12 @@ class Model(object):
         prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
         self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
-        tf.scalar_summary("V_next_sum", tf.reduce_sum(self.V_next))
-        tf.scalar_summary("V_sum", tf.reduce_sum(self.V))
+        tf.scalar_summary(self.V_next.name + '/sum', tf.reduce_sum(self.V_next))
+        tf.scalar_summary(self.V.name + '/sum', tf.reduce_sum(self.V))
 
         tf.histogram_summary(self.V_next.name, self.V_next)
         tf.histogram_summary(self.V.name, self.V)
 
-        self.loss_op = self.get_loss_op()
         self.train_op = self.get_train_op()
 
         self.summaries = tf.merge_all_summaries()
@@ -69,11 +68,6 @@ class Model(object):
             if latest_checkpoint_path:
                 self.saver.restore(self.sess, latest_checkpoint_path)
 
-    def get_loss_op(self):
-        loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
-        loss_summary = tf.scalar_summary(loss_op.name, loss_op)
-        return loss_op
-
     def get_train_op(self):
         alpha = 0.1
         lm = 0.7
@@ -81,23 +75,26 @@ class Model(object):
         reward = 0.0
 
         tvars = tf.trainable_variables()
-        grads = tf.gradients(self.V, tvars)
+        grads = tf.gradients(self.V, tvars) # ys wrt x in xs
 
-        # take sum since its a measure of surprise the individual values don't matter
-        # gradients above take care of contributions
-        sigma = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, reduction_indices=1, name='sigma')
+        # take sum, since it's a measure of surprise, the individual values don't matter
+        # gradients above take care of contribution
+        sigma = tf.reduce_sum(self.V_next - self.V, name='sigma')
         tf.scalar_summary(sigma.name, sigma)
+
+        loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
+        tf.scalar_summary(loss.name, loss)
 
         updates = []
         for grad, var in zip(grads, tvars):
-            # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
             trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
 
             tf.histogram_summary(var.op.name, var)
             tf.histogram_summary(var.op.name + '/gradients', grad)
             tf.histogram_summary(var.op.name + '/traces', trace)
 
-            trace_op = trace.assign(gamma * lm * trace + grad)
+            # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
+            trace_op = trace.assign(lm * trace + grad)
             assign_op = var.assign_add(alpha * sigma * trace_op)
             updates.append(assign_op)
 
@@ -161,48 +158,39 @@ class Model(object):
         episodes = 200000
 
         for episode in range(episodes):
-            if episode % test_interval == 0:
-                self.test(episodes=20)
-
             game = Game(white, black)
             step = 0
 
+            x_curr = game.board.to_array()
+
             while not game.board.finished():
-                x = game.board.to_array()
-
                 game.next(draw_board=False)
-
                 x_next = game.board.to_array()
                 V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
-                _, loss, summaries = self.sess.run([
-                    self.train_op,
-                    self.loss_op,
-                    self.summaries
-                ], feed_dict={
-                    self.x: x,
+                self.sess.run(self.train_op, feed_dict={
+                    self.x: x_curr,
                     self.V_next: V_next
                 })
-                summary_writer.add_summary(summaries, global_step)
+
+                x_curr = x_next
 
                 global_step += 1
                 step += 1
 
-            x = game.board.to_array()
-            _, loss, summaries = self.sess.run([
+            z = game.to_outcome_array()
+
+            _, summaries = self.sess.run([
                 self.train_op,
-                self.loss_op,
                 self.summaries
             ], feed_dict={
-                self.x: x,
-                self.V_next: game.to_outcome_array()
+                self.x: x_curr,
+                self.V_next: z
             })
-            summary_writer.add_summary(summaries, global_step)
+            summary_writer.add_summary(summaries, episode)
 
-            print('GAME => [{0}] Loss: {1}'.format(episode, loss))
-
+            print('GAME => [{0}] {1}'.format(episode, z))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
-
         self.test(episodes=100)

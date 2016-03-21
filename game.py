@@ -109,10 +109,12 @@ class Game(object):
             return np.array([[0, 0, 1, 0]], dtype='float')
         elif homed_black == 15 and homed_white == 0: # gammon black
             return np.array([[0, 0, 0, 1]], dtype='float')
-        elif homed_white == 15:
-            return np.array([[1, 0, 0, 0]], dtype='float') # win white
-        elif homed_black == 15: # gammon
-            return np.array([[0, 1, 0, 0]], dtype='float') # win black
+        elif homed_white == 15: # win white
+            return np.array([[1, 0, 0, 0]], dtype='float')
+        elif homed_black == 15: # win black
+            return np.array([[0, 1, 0, 0]], dtype='float')
+        else:
+            raise
 
     @staticmethod
     def _all_choices(board, roll, color, path):
