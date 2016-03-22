@@ -47,8 +47,8 @@ class Model(object):
         self.x = tf.placeholder("float", [1, input_layer_size], name="x")
         self.V_next = tf.placeholder("float", [1, output_layer_size], name="V_next")
 
-        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
-        self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
+        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.relu, name='layer1')
+        self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.nn.softmax, name='layer2')
 
         tf.scalar_summary(self.V_next.name + '/sum', tf.reduce_sum(self.V_next))
         tf.scalar_summary(self.V.name + '/sum', tf.reduce_sum(self.V))
@@ -179,6 +179,7 @@ class Model(object):
                 step += 1
 
             z = game.to_outcome_array()
+            x_curr = game.to_array()
 
             v, _, summaries = self.sess.run([
                 self.V,
