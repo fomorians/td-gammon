@@ -118,8 +118,13 @@ class Model(object):
         with tf.control_dependencies([sigma_ema_op, loss_ema_op, accuracy_ema_op]):
             self.train_op = tf.group(*grad_updates, name="train")
 
-        self.summaries = tf.merge_all_summaries()
+        # merge summaries for TensorBoard
+        self.summary_op = tf.merge_all_summaries()
+
+        # create a saver for periodic checkpoints
         self.saver = tf.train.Saver(max_to_keep=1)
+
+        # run variable initializers
         self.sess.run(tf.initialize_all_variables())
 
         # after training a model, we can restore checkpoints here
@@ -193,10 +198,10 @@ class Model(object):
 
                 v, sigma, loss, _, summaries = self.sess.run([
                     self.V,
-                    self.sigma,
-                    self.loss,
+                    self.sigma_op,
+                    self.loss_op,
                     self.train_op,
-                    self.summaries
+                    self.summary_op
                 ], feed_dict={
                     self.x: x,
                     self.V_next: V_next
@@ -211,11 +216,11 @@ class Model(object):
 
             v, accuracy, sigma, loss, _, summaries = self.sess.run([
                 self.V,
-                self.accuracy,
-                self.sigma,
-                self.loss,
+                self.accuracy_op,
+                self.sigma_op,
+                self.loss_op,
                 self.train_op,
-                self.summaries
+                self.summary_op
             ], feed_dict={
                 self.x: x,
                 self.V_next: z
