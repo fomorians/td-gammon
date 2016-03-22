@@ -25,7 +25,7 @@ class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold',
     """
     pass
 
-def simply_weighted(weights, color, board):
+def simply_weighted(weights, color, board, game):
     """
     A generic strategy that computes the quality of a board from given weights.
     """
@@ -39,7 +39,7 @@ def simply_weighted(weights, color, board):
         score += weights.stronghold * len(board.strongholds(color))
     return score
 
-def aggressive_strategy(color, board):
+def aggressive_strategy(color, board, game):
     """
     A strategy that highly favors boards with opponent pieces in jail.
     """
@@ -53,7 +53,7 @@ aggressive_strategy.weights = Weights(
     safe = 0,
 )
 
-def safe_strategy(color, board):
+def safe_strategy(color, board, game):
     """
     A strategy that highly penalizes exposed pieces.
     """
@@ -67,7 +67,7 @@ safe_strategy.weights = Weights(
     safe = 0,
 )
 
-def random_strategy(color, board):
+def random_strategy(color, board, game):
     """
     A strategy that returns a random score for any board.
     """
