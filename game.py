@@ -102,17 +102,24 @@ class Game(object):
         print(self.board)
         print('{}: {}'.format(self.color, self.roll))
 
+    def to_array(self):
+        players = [1, 0] if self.color == Player.WHITE else [0, 1]
+        flat = self.board.to_array()
+        flat = np.append(flat, players)
+        flat = flat.reshape(1, flat.size)
+        return flat
+
     def to_outcome_array(self):
         homed_white = len(self.board.homed(Player.WHITE))
         homed_black = len(self.board.homed(Player.BLACK))
-        if homed_white == 15 and homed_black == 0: # gammon white
-            return np.array([[0, 0, 1, 0]], dtype='float')
-        elif homed_black == 15 and homed_white == 0: # gammon black
-            return np.array([[0, 0, 0, 1]], dtype='float')
-        elif homed_white == 15: # win white
-            return np.array([[1, 0, 0, 0]], dtype='float')
+        # if homed_white == 15 and homed_black == 0: # gammon white
+        #     return np.array([[0, 0, 1, 0]], dtype='float')
+        # elif homed_black == 15 and homed_white == 0: # gammon black
+        #     return np.array([[0, 0, 0, 1]], dtype='float')
+        if homed_white == 15: # win white
+            return np.array([[1, 0]], dtype='float')
         elif homed_black == 15: # win black
-            return np.array([[0, 1, 0, 0]], dtype='float')
+            return np.array([[0, 1]], dtype='float')
         else:
             raise
 

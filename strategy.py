@@ -6,12 +6,13 @@ from collections import namedtuple
 from player import Player
 from board import Board
 
-def td_gammon_strategy(model, color, board):
-    scores = model.get_output(board)
+def td_gammon_strategy(model, color, board, game):
+    scores = model.get_output(game)
+    scores = scores[0]
     if color == Player.WHITE:
-        return max(scores[0][0], scores[0][2])
+        return scores[0] # max(scores[0][0], scores[0][2])
     else:
-        return max(scores[0][1], scores[0][3])
+        return scores[1] # max(scores[0][1], scores[0][3])
 
 class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold', 'safe'])):
     """

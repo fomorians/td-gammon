@@ -19,7 +19,7 @@ class PlayerStrategy(Player):
         best_moves = []
 
         for moves in game.all_choices():
-            score = self.score(reduce(lambda board, move: board.move(*move), moves, game.board))
+            score = self.score(reduce(lambda board, move: board.move(*move), moves, game.board), game)
             if high_score is None or score > high_score:
                 high_score = score
                 best_moves = moves

@@ -40,9 +40,9 @@ class Model(object):
         self.sess = tf.Session()
         self.graph = tf.Graph()
 
-        input_layer_size = 476
+        input_layer_size = 478
         hidden_layer_size = 60
-        output_layer_size = 4
+        output_layer_size = 2
 
         self.x = tf.placeholder("float", [1, input_layer_size], name="x")
         self.V_next = tf.placeholder("float", [1, output_layer_size], name="V_next")
@@ -82,21 +82,20 @@ class Model(object):
         sigma = tf.reduce_sum(self.V_next - self.V, name='sigma')
         tf.scalar_summary(sigma.name, sigma)
 
-        loss = -tf.reduce_sum(self.V_next * tf.log(self.V), name='loss')
-        # loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
+        loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         tf.scalar_summary(loss.name, loss)
 
         updates = []
         for grad, var in zip(grads, tvars):
-            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
+            # trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
 
             tf.histogram_summary(var.op.name, var)
             tf.histogram_summary(var.op.name + '/gradients', grad)
-            tf.histogram_summary(var.op.name + '/traces', trace)
+            # tf.histogram_summary(var.op.name + '/traces', trace)
 
             # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
-            trace_op = trace.assign(lm * trace + grad)
-            assign_op = var.assign_add(alpha * sigma * trace_op)
+            # trace_op = trace.assign(lm * trace + grad)
+            assign_op = var.assign_add(alpha * sigma * grad)
             updates.append(assign_op)
 
         # gradient updates
@@ -104,9 +103,9 @@ class Model(object):
             train_op = tf.no_op(name="train")
         return train_op
 
-    def get_output(self, board):
+    def get_output(self, game):
         return self.sess.run(self.V, feed_dict={
-            self.x: board.to_array()
+            self.x: game.to_array()
         })
 
     def play(self):
@@ -162,11 +161,11 @@ class Model(object):
             game = Game(white, black)
             step = 0
 
-            x_curr = game.board.to_array()
+            x_curr = game.to_array()
 
             while not game.board.finished():
                 game.next(draw_board=False)
-                x_next = game.board.to_array()
+                x_next = game.to_array()
                 V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
                 self.sess.run(self.train_op, feed_dict={
@@ -191,7 +190,7 @@ class Model(object):
             })
             summary_writer.add_summary(summaries, episode)
 
-            print('GAME => [{0}] {1}'.format(episode, v, z))
+            print('GAME => [{0}] {1} {2}'.format(episode, v, z))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
