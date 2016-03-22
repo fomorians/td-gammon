@@ -61,30 +61,47 @@ class Model(object):
         prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
         self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
+        # watch the individual value predictions over time
         tf.scalar_summary(self.V_next.name + '/sum', tf.reduce_sum(self.V_next))
         tf.scalar_summary(self.V.name + '/sum', tf.reduce_sum(self.V))
 
-        tf.histogram_summary(self.V_next.name, self.V_next)
-        tf.histogram_summary(self.V.name, self.V)
+        # tf.histogram_summary(self.V_next.name, self.V_next)
+        # tf.histogram_summary(self.V.name, self.V)
 
         # TODO: take the difference of vector containing win scenarios (incl. gammons)
-        self.sigma = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, name='sigma')
-        tf.scalar_summary('sigma', self.sigma)
+        # sigma = r + gamma * V_next - V
+        self.sigma_op = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, name='sigma')
+        tf.scalar_summary(self.sigma_op.name, self.sigma_op)
+        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        sigma_ema_op = sigma_ema.apply([self.sigma_op])
+        tf.scalar_summary('sigma_avg', sigma_ema.average(self.sigma_op))
 
-        self.loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
-        tf.scalar_summary(self.loss.name, self.loss)
+        # mean squared error of the difference between the next state and the current state
+        self.loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
+        tf.scalar_summary(self.loss_op.name, self.loss_op)
+        loss_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        loss_ema_op = loss_ema.apply([self.loss_op])
+        tf.scalar_summary('loss_avg', loss_ema.average(self.loss_op))
 
-        self.accuracy = tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float', name='accuracy')
+        # check if the model predicts the correct winner
+        self.accuracy_op = tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float', name='accuracy')
         accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
-        accuracy_avg = accuracy_ema.apply([self.accuracy])
+        accuracy_ema_op = accuracy_ema.apply([self.accuracy_op])
+        tf.scalar_summary('accuracy_avg', accuracy_ema.average(self.accuracy_op))
 
+        # perform gradient updates using TD-lambda and eligibility traces
+
+        # get gradients of output V wrt trainable variables (weights and biases)
         tvars = tf.trainable_variables()
         grads = tf.gradients(self.V, tvars) # ys wrt x in xs
 
+        # watch the weight and gradient distributions
         for grad, var in zip(grads, tvars):
             tf.histogram_summary(var.op.name, var)
             tf.histogram_summary(var.op.name + '/gradients', grad)
 
+        # for each variable, define operations to update the var with sigma,
+        # taking into account the gradient as part of the eligibility trace
         with tf.variable_scope('grad_updates'):
             grad_updates = []
             for grad, var in zip(grads, tvars):
@@ -94,17 +111,18 @@ class Model(object):
                     trace_op = trace.assign(gamma * lm * trace + grad)
                     tf.histogram_summary(var.op.name + '/traces', trace)
 
-                assign_op = var.assign_add(alpha * self.sigma * trace_op)
+                assign_op = var.assign_add(alpha * self.sigma_op * trace_op)
                 grad_updates.append(assign_op)
 
-        # applies gradient updates
-        self.train_op = tf.group(*grad_updates, name="train")
+        # define single operation to apply all gradient updates
+        with tf.control_dependencies([sigma_ema_op, loss_ema_op, accuracy_ema_op]):
+            self.train_op = tf.group(*grad_updates, name="train")
 
         self.summaries = tf.merge_all_summaries()
         self.saver = tf.train.Saver(max_to_keep=1)
-
         self.sess.run(tf.initialize_all_variables())
 
+        # after training a model, we can restore checkpoints here
         if restore:
             latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
             if latest_checkpoint_path:
