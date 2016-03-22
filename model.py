@@ -74,9 +74,6 @@ class Model(object):
         gamma = 1.0
         reward = 0.0
 
-        tvars = tf.trainable_variables()
-        grads = tf.gradients(self.V, tvars) # ys wrt x in xs
-
         # take sum, since it's a measure of surprise, the individual values don't matter
         # gradients above take care of contribution
         sigma = tf.reduce_sum(self.V_next - self.V, name='sigma')
@@ -84,6 +81,9 @@ class Model(object):
 
         loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         tf.scalar_summary(loss.name, loss)
+
+        tvars = tf.trainable_variables()
+        grads = tf.gradients(loss, tvars) # ys wrt x in xs
 
         updates = []
         for grad, var in zip(grads, tvars):
