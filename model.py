@@ -74,20 +74,20 @@ class Model(object):
         tf.scalar_summary(self.sigma_op.name, self.sigma_op)
         sigma_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
         sigma_ema_op = sigma_ema.apply([self.sigma_op])
-        tf.scalar_summary('sigma_avg', tf.reduce_sum(sigma_ema.average(self.sigma_op)))
+        tf.scalar_summary('sigma_avg', sigma_ema.average(self.sigma_op))
 
         # mean squared error of the difference between the next state and the current state
         self.loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         tf.scalar_summary(self.loss_op.name, self.loss_op)
         loss_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
         loss_ema_op = loss_ema.apply([self.loss_op])
-        tf.scalar_summary('loss_avg', tf.reduce_sum(loss_ema.average(self.loss_op)))
+        tf.scalar_summary('loss_avg', loss_ema.average(self.loss_op))
 
         # check if the model predicts the correct winner
-        self.accuracy_op = tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float', name='accuracy')
+        self.accuracy_op = tf.reduce_sum(tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float'), name='accuracy')
         accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
         accuracy_ema_op = accuracy_ema.apply([self.accuracy_op])
-        tf.scalar_summary('accuracy_avg', tf.reduce_sum(accuracy_ema.average(self.accuracy_op)))
+        tf.scalar_summary('accuracy_avg', accuracy_ema.average(self.accuracy_op))
 
         # perform gradient updates using TD-lambda and eligibility traces
 
@@ -179,7 +179,7 @@ class Model(object):
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         global_step = 0
-        test_interval = 100
+        test_interval = 250
         episodes = 2000
 
         for episode in range(episodes):
