@@ -71,8 +71,9 @@ def random_strategy(color, board, game):
     """
     A strategy that returns a random score for any board.
     """
-    scores = np.random.random([1, 4])
+    scores = np.random.random([1])
+    score = scores[0]
     if color == Player.WHITE:
-        return max(scores[0][0], scores[0][2])
+        return score # max(scores[0][0], scores[0][2])
     else:
-        return max(scores[0][1], scores[0][3])
+        return 1. - score # max(scores[0][1], scores[0][3])
