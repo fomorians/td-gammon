@@ -91,15 +91,15 @@ class Model(object):
 
         updates = []
         for grad, var in zip(grads, tvars):
-            # trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
+            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
 
             tf.histogram_summary(var.op.name, var)
             tf.histogram_summary(var.op.name + '/gradients', grad)
-            # tf.histogram_summary(var.op.name + '/traces', trace)
+            tf.histogram_summary(var.op.name + '/traces', trace)
 
             # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
-            # trace_op = trace.assign(lm * trace + grad)
-            assign_op = var.assign_add(alpha * sigma * grad)
+            trace_op = trace.assign(lm * trace + grad)
+            assign_op = var.assign_add(alpha * sigma * trace_op)
             updates.append(assign_op)
 
         # gradient updates
@@ -172,10 +172,11 @@ class Model(object):
                 x_next = game.to_array()
                 V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
-                self.sess.run(self.train_op, feed_dict={
+                _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
                     self.x: x_curr,
                     self.V_next: V_next
                 })
+                summary_writer.add_summary(summaries, episode)
 
                 x_curr = x_next
 
