@@ -76,14 +76,18 @@ class Model(object):
 
         # take sum, since it's a measure of surprise, the individual values don't matter
         # gradients above take care of contribution
-        sigma = tf.reduce_sum(self.V_next - self.V, name='sigma')
+        self.sigma = sigma = tf.reduce_sum(tf.abs(self.V_next - self.V), name='sigma')
         tf.scalar_summary(sigma.name, sigma)
 
-        loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
+        self.loss = loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         tf.scalar_summary(loss.name, loss)
 
+        correct_prediction = tf.equal(tf.argmax(self.V_next, 1), tf.argmax(self.V, 1))
+        self.accuracy = accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
+        accuracy_summary = tf.scalar_summary('accuracy', accuracy)
+
         tvars = tf.trainable_variables()
-        grads = tf.gradients(loss, tvars) # ys wrt x in xs
+        grads = tf.gradients(self.V, tvars) # ys wrt x in xs
 
         updates = []
         for grad, var in zip(grads, tvars):
@@ -181,8 +185,11 @@ class Model(object):
             z = game.to_outcome_array()
             x_curr = game.to_array()
 
-            v, _, summaries = self.sess.run([
+            v, accuracy, sigma, loss, _, summaries = self.sess.run([
                 self.V,
+                self.accuracy,
+                self.sigma,
+                self.loss,
                 self.train_op,
                 self.summaries
             ], feed_dict={
@@ -191,7 +198,7 @@ class Model(object):
             })
             summary_writer.add_summary(summaries, episode)
 
-            print('GAME => [{0}] {1} {2}'.format(episode, v, z))
+            print('GAME => [{0}] {1} {2} (accuracy: {3}, sigma: {4}, loss: {5})'.format(episode, v, z, accuracy, sigma, loss))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
