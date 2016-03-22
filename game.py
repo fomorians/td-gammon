@@ -109,7 +109,7 @@ class Game(object):
         flat = flat.reshape(1, flat.size)
         return flat
 
-    def to_outcome_array(self):
+    def to_win_array(self):
         homed_white = len(self.board.homed(Player.WHITE))
         homed_black = len(self.board.homed(Player.BLACK))
         # if homed_white == 15 and homed_black == 0: # gammon white

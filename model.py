@@ -3,6 +3,7 @@ from __future__ import division
 import os
 import time
 import random
+import numpy as np
 import tensorflow as tf
 
 from functools import partial, reduce
@@ -37,16 +38,26 @@ def dense_layer(x, input_size, output_size, activation, name):
 
 class Model(object):
     def __init__(self, restore=False):
+        # setup our session and graph
         self.sess = tf.Session()
         self.graph = tf.Graph()
 
+        # setup some constants
+        alpha = 0.1 # learning rate
+        lm = 0.7 # lambda
+        gamma = 1.0 # discount
+        reward = 0.0
+
+        # describe network size
         input_layer_size = 478
-        hidden_layer_size = 40
+        hidden_layer_size = 60
         output_layer_size = 1
 
+        # placeholders for input and target output
         self.x = tf.placeholder("float", [1, input_layer_size], name="x")
         self.V_next = tf.placeholder("float", [1, output_layer_size], name="V_next")
 
+        # build network arch. (just 2 layers with sigmoid activation)
         prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
         self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
@@ -56,7 +67,38 @@ class Model(object):
         tf.histogram_summary(self.V_next.name, self.V_next)
         tf.histogram_summary(self.V.name, self.V)
 
-        self.train_op = self.get_train_op()
+        # TODO: take the difference of vector containing win scenarios (incl. gammons)
+        self.sigma = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, name='sigma')
+        tf.scalar_summary('sigma', self.sigma)
+
+        self.loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
+        tf.scalar_summary(self.loss.name, self.loss)
+
+        self.accuracy = tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float', name='accuracy')
+        accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        accuracy_avg = accuracy_ema.apply([self.accuracy])
+
+        tvars = tf.trainable_variables()
+        grads = tf.gradients(self.V, tvars) # ys wrt x in xs
+
+        for grad, var in zip(grads, tvars):
+            tf.histogram_summary(var.op.name, var)
+            tf.histogram_summary(var.op.name + '/gradients', grad)
+
+        with tf.variable_scope('grad_updates'):
+            grad_updates = []
+            for grad, var in zip(grads, tvars):
+                with tf.variable_scope('trace'):
+                    # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
+                    trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
+                    trace_op = trace.assign(gamma * lm * trace + grad)
+                    tf.histogram_summary(var.op.name + '/traces', trace)
+
+                assign_op = var.assign_add(alpha * self.sigma * trace_op)
+                grad_updates.append(assign_op)
+
+        # applies gradient updates
+        self.train_op = tf.group(*grad_updates, name="train")
 
         self.summaries = tf.merge_all_summaries()
         self.saver = tf.train.Saver(max_to_keep=1)
@@ -68,49 +110,8 @@ class Model(object):
             if latest_checkpoint_path:
                 self.saver.restore(self.sess, latest_checkpoint_path)
 
-    def get_train_op(self):
-        alpha = 0.1
-        lm = 0.7
-        gamma = 1.0
-        reward = 0.0
-
-        # take sum, since it's a measure of surprise, the individual values don't matter
-        # gradients above take care of contribution
-        self.sigma = sigma = tf.reduce_sum(self.V_next - self.V, name='sigma')
-        tf.scalar_summary(sigma.name, sigma)
-
-        self.loss = loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
-        tf.scalar_summary(loss.name, loss)
-
-        correct_prediction = tf.equal(tf.argmax(self.V_next, 1), tf.argmax(self.V, 1))
-        self.accuracy = accuracy = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
-        accuracy_summary = tf.scalar_summary('accuracy', accuracy)
-
-        tvars = tf.trainable_variables()
-        grads = tf.gradients(self.V, tvars) # ys wrt x in xs
-
-        updates = []
-        for grad, var in zip(grads, tvars):
-            trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
-
-            tf.histogram_summary(var.op.name, var)
-            tf.histogram_summary(var.op.name + '/gradients', grad)
-            tf.histogram_summary(var.op.name + '/traces', trace)
-
-            # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
-            trace_op = trace.assign(lm * trace + grad)
-            assign_op = var.assign_add(alpha * sigma * trace_op)
-            updates.append(assign_op)
-
-        # gradient updates
-        with tf.control_dependencies(updates):
-            train_op = tf.no_op(name="train")
-        return train_op
-
     def get_output(self, game):
-        return self.sess.run(self.V, feed_dict={
-            self.x: game.to_array()
-        })
+        return self.sess.run(self.V, feed_dict={ self.x: game.to_array() })
 
     def play(self):
         strategy = partial(td_gammon_strategy, self)
@@ -142,10 +143,7 @@ class Model(object):
                 wins_rand += 1
 
             win_ratio = wins_td / wins_rand if wins_rand > 0 else wins_td
-            print('TEST GAME => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, win_ratio, wins_td, wins_rand))
-
-        win_ratio = wins_td / wins_rand if wins_rand > 0 else wins_td
-        print('TEST => [{0}] Wins: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, win_ratio, wins_td, wins_rand))
+            print('TEST GAME [{0}] => Ratio: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, win_ratio, wins_td, wins_rand))
 
     def train(self):
         self.sess.run(tf.initialize_all_variables())
@@ -162,29 +160,36 @@ class Model(object):
         episodes = 2000
 
         for episode in range(episodes):
-            game = Game(white, black)
-            step = 0
+            if episode != 0 and episode % test_interval == 0:
+                self.test()
 
-            x_curr = game.to_array()
+            game = Game(white, black)
+            episode_step = 0
 
             while not game.board.finished():
+                x = game.to_array()
+
                 game.next(draw_board=False)
                 x_next = game.to_array()
                 V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
-                _, summaries = self.sess.run([self.train_op, self.summaries], feed_dict={
-                    self.x: x_curr,
+                v, sigma, loss, _, summaries = self.sess.run([
+                    self.V,
+                    self.sigma,
+                    self.loss,
+                    self.train_op,
+                    self.summaries
+                ], feed_dict={
+                    self.x: x,
                     self.V_next: V_next
                 })
-                summary_writer.add_summary(summaries, episode)
-
-                x_curr = x_next
+                summary_writer.add_summary(summaries, global_step)
 
                 global_step += 1
-                step += 1
+                episode_step += 1
 
-            z = game.to_outcome_array()
-            x_curr = game.to_array()
+            x = game.to_array()
+            z = game.to_win_array()
 
             v, accuracy, sigma, loss, _, summaries = self.sess.run([
                 self.V,
@@ -194,13 +199,12 @@ class Model(object):
                 self.train_op,
                 self.summaries
             ], feed_dict={
-                self.x: x_curr,
+                self.x: x,
                 self.V_next: z
             })
-            summary_writer.add_summary(summaries, episode)
-
-            print('GAME => [{0}] {1} {2} (accuracy: {3}, sigma: {4}, loss: {5})'.format(episode, v, z, accuracy, sigma, loss))
+            summary_writer.add_summary(summaries, global_step)
+            print('TRAIN GAME [{0}] => {1} {2} (accuracy: {3}, sigma: {4}, loss: {5})'.format(episode, np.around(v), z, accuracy, sigma, loss))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
-        self.test(episodes=100)
+        self.test()
