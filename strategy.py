@@ -8,11 +8,11 @@ from board import Board
 
 def td_gammon_strategy(model, color, board, game):
     scores = model.get_output(game)
-    scores = scores[0]
+    score = scores[0]
     if color == Player.WHITE:
-        return scores[0] # max(scores[0][0], scores[0][2])
+        return score # max(scores[0][0], scores[0][2])
     else:
-        return scores[1] # max(scores[0][1], scores[0][3])
+        return 1. - score # max(scores[0][1], scores[0][3])
 
 class Weights(namedtuple('Weights', ['jailed', 'homed', 'exposed', 'stronghold', 'safe'])):
     """

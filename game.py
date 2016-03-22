@@ -117,9 +117,9 @@ class Game(object):
         # elif homed_black == 15 and homed_white == 0: # gammon black
         #     return np.array([[0, 0, 0, 1]], dtype='float')
         if homed_white == 15: # win white
-            return np.array([[1, 0]], dtype='float')
+            return np.array([[1]], dtype='float')
         elif homed_black == 15: # win black
-            return np.array([[0, 1]], dtype='float')
+            return np.array([[0]], dtype='float')
         else:
             raise
 

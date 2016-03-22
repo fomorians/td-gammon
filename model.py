@@ -41,14 +41,14 @@ class Model(object):
         self.graph = tf.Graph()
 
         input_layer_size = 478
-        hidden_layer_size = 60
-        output_layer_size = 2
+        hidden_layer_size = 40
+        output_layer_size = 1
 
         self.x = tf.placeholder("float", [1, input_layer_size], name="x")
         self.V_next = tf.placeholder("float", [1, output_layer_size], name="V_next")
 
-        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.nn.relu, name='layer1')
-        self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.nn.softmax, name='layer2')
+        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
+        self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
         tf.scalar_summary(self.V_next.name + '/sum', tf.reduce_sum(self.V_next))
         tf.scalar_summary(self.V.name + '/sum', tf.reduce_sum(self.V))
@@ -76,7 +76,7 @@ class Model(object):
 
         # take sum, since it's a measure of surprise, the individual values don't matter
         # gradients above take care of contribution
-        self.sigma = sigma = tf.reduce_sum(tf.abs(self.V_next - self.V), name='sigma')
+        self.sigma = sigma = tf.reduce_sum(self.V_next - self.V, name='sigma')
         tf.scalar_summary(sigma.name, sigma)
 
         self.loss = loss = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
