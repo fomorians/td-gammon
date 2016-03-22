@@ -155,7 +155,7 @@ class Model(object):
 
         global_step = 0
         test_interval = 100
-        episodes = 200000
+        episodes = 2000
 
         for episode in range(episodes):
             game = Game(white, black)
