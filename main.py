@@ -14,6 +14,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('play', False, 'If true, play against the trained model.')
 flags.DEFINE_boolean('test', False, 'If true, test against a random strategy.')
+flags.DEFINE_boolean('restore', False, 'If true, restore a checkpoint when training.')
 
 if __name__ == '__main__':
     if FLAGS.play:
@@ -23,5 +24,5 @@ if __name__ == '__main__':
         model = Model(restore=True)
         model.test()
     else:
-        model = Model(restore=False)
+        model = Model(restore=FLAGS.restore)
         model.train()
