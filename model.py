@@ -47,9 +47,9 @@ class Model(object):
 
         # learning rate and lambda decay
         self.alpha = tf.train.exponential_decay(0.1, self.global_step, \
-            10000, 0.96, staircase=True, name='alpha') # learning rate
+            15000, 0.95, staircase=True, name='alpha') # learning rate
         self.lm = tf.train.exponential_decay(0.9, self.global_step, \
-            10000, 0.96, staircase=True, name='lambda') #lambda
+            15000, 0.95, staircase=True, name='lambda') #lambda
 
         tf.scalar_summary(self.alpha.name, self.alpha)
         tf.scalar_summary(self.lm.name, self.lm)
