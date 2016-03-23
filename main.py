@@ -2,12 +2,14 @@ import tensorflow as tf
 
 from functools import partial, reduce
 
+from backgammon.game import Game
+from backgammon.player import Player
+from backgammon.player_human import PlayerHuman
+from backgammon.player_strategy import PlayerStrategy
+from backgammon.strategy import safe_strategy
+
 from model import Model
-from game import Game
-from player import Player
-from player_human import PlayerHuman
-from player_strategy import PlayerStrategy
-from strategy import td_gammon_strategy, safe_strategy
+from strategy import td_gammon_strategy
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS

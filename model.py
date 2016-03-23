@@ -8,10 +8,12 @@ import tensorflow as tf
 
 from functools import partial, reduce
 
-from game import Game
-from player import Player
-from player_strategy import PlayerStrategy
-from strategy import td_gammon_strategy, random_strategy
+from backgammon.game import Game
+from backgammon.player import Player
+from backgammon.player_strategy import PlayerStrategy
+from backgammon.strategy import random_strategy
+
+from strategy import td_gammon_strategy
 
 model_path = os.environ.get('MODEL_PATH', 'models/')
 checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
@@ -181,7 +183,7 @@ class Model(object):
         episodes = 10000
 
         for episode in range(episodes):
-            if episode != 0 and episode % test_interval == 0:
+            if episode != 1 and episode % test_interval == 0:
                 self.test(episodes=100)
 
             game = Game(white, black)
