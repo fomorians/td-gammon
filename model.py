@@ -37,10 +37,9 @@ def dense_layer(x, input_size, output_size, activation, name):
         return activation(tf.matmul(x, W) + b, name='activation')
 
 class Model(object):
-    def __init__(self, restore=False):
-        # setup our session and graph
-        self.sess = tf.Session()
-        self.graph = tf.Graph()
+    def __init__(self, sess, restore=False):
+        # setup our session
+        self.sess = sess
 
         # setup some constants
         alpha = 0.1 # learning rate
@@ -170,8 +169,6 @@ class Model(object):
             print('TEST GAME [{0}] => Ratio: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, win_ratio, wins_td, wins_rand))
 
     def train(self):
-        self.sess.run(tf.initialize_all_variables())
-
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
         summary_writer = tf.train.SummaryWriter(summary_path, self.sess.graph_def)
 
