@@ -131,6 +131,7 @@ class Model(object):
         if restore:
             latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
             if latest_checkpoint_path:
+                print('Restoring checkpoint: {0}'.format(latest_checkpoint_path))
                 self.saver.restore(self.sess, latest_checkpoint_path)
 
     def get_output(self, game):
@@ -179,12 +180,12 @@ class Model(object):
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         global_step = 0
-        test_interval = 250
-        episodes = 2000
+        test_interval = 1000
+        episodes = 10000
 
         for episode in range(episodes):
             if episode != 0 and episode % test_interval == 0:
-                self.test()
+                self.test(episodes=100)
 
             game = Game(white, black)
             episode_step = 0
@@ -230,4 +231,4 @@ class Model(object):
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
-        self.test()
+        self.test(episodes=1000)
