@@ -51,7 +51,7 @@ class Model(object):
 
         # describe network size
         input_layer_size = 478
-        hidden_layer_size = 60
+        hidden_layer_size = 120
         output_layer_size = 1
 
         # placeholders for input and target output
@@ -73,20 +73,20 @@ class Model(object):
         # sigma = r + gamma * V_next - V
         self.sigma_op = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, name='sigma')
         tf.scalar_summary(self.sigma_op.name, self.sigma_op)
-        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         sigma_ema_op = sigma_ema.apply([self.sigma_op])
         tf.scalar_summary('sigma_avg', sigma_ema.average(self.sigma_op))
 
         # mean squared error of the difference between the next state and the current state
         self.loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         tf.scalar_summary(self.loss_op.name, self.loss_op)
-        loss_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        loss_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         loss_ema_op = loss_ema.apply([self.loss_op])
         tf.scalar_summary('loss_avg', loss_ema.average(self.loss_op))
 
         # check if the model predicts the correct winner
         self.accuracy_op = tf.reduce_sum(tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float'), name='accuracy')
-        accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         accuracy_ema_op = accuracy_ema.apply([self.accuracy_op])
         tf.scalar_summary('accuracy_avg', accuracy_ema.average(self.accuracy_op))
 
