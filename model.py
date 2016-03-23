@@ -183,7 +183,7 @@ class Model(object):
         episodes = 10000
 
         for episode in range(episodes):
-            if episode != 1 and episode % test_interval == 0:
+            if episode != 0 and episode % test_interval == 0:
                 self.test(episodes=100)
 
             game = Game(white, black)
