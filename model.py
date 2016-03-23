@@ -101,7 +101,7 @@ class Model(object):
 
         # perform gradient updates using TD-lambda and eligibility traces
 
-        global_step_op = global_step.assign_add(1)
+        global_step_op = self.global_step.assign_add(1)
 
         # get gradients of output V wrt trainable variables (weights and biases)
         tvars = tf.trainable_variables()
@@ -120,10 +120,10 @@ class Model(object):
                 with tf.variable_scope('trace'):
                     # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
                     trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
-                    trace_op = trace.assign(gamma * lm * trace + grad)
+                    trace_op = trace.assign(gamma * self.lm * trace + grad)
                     tf.histogram_summary(var.op.name + '/traces', trace)
 
-                assign_op = var.assign_add(alpha * self.sigma_op * trace_op)
+                assign_op = var.assign_add(self.alpha * self.sigma_op * trace_op)
                 grad_updates.append(assign_op)
 
         # define single operation to apply all gradient updates
