@@ -43,9 +43,18 @@ class Model(object):
         # setup our session
         self.sess = sess
 
+        self.global_step = tf.Variable(0, trainable=False, name='global_step')
+
+        # learning rate and lambda decay
+        self.alpha = tf.train.exponential_decay(0.1, self.global_step, \
+            10000, 0.96, staircase=True, name='alpha') # learning rate
+        self.lm = tf.train.exponential_decay(0.9, self.global_step, \
+            10000, 0.96, staircase=True, name='lambda') #lambda
+
+        tf.scalar_summary(self.alpha.name, self.alpha)
+        tf.scalar_summary(self.lm.name, self.lm)
+
         # setup some constants
-        alpha = 0.1 # learning rate
-        lm = 0.7 # lambda
         gamma = 1.0 # discount
         reward = 0.0
 
@@ -92,6 +101,8 @@ class Model(object):
 
         # perform gradient updates using TD-lambda and eligibility traces
 
+        global_step_op = global_step.assign_add(1)
+
         # get gradients of output V wrt trainable variables (weights and biases)
         tvars = tf.trainable_variables()
         grads = tf.gradients(self.V, tvars) # ys wrt x in xs
@@ -116,7 +127,7 @@ class Model(object):
                 grad_updates.append(assign_op)
 
         # define single operation to apply all gradient updates
-        with tf.control_dependencies([sigma_ema_op, loss_ema_op, accuracy_ema_op]):
+        with tf.control_dependencies([global_step_op, sigma_ema_op, loss_ema_op, accuracy_ema_op]):
             self.train_op = tf.group(*grad_updates, name="train")
 
         # merge summaries for TensorBoard
@@ -178,7 +189,6 @@ class Model(object):
         white = PlayerStrategy(Player.WHITE, model_strategy)
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
-        global_step = 0
         test_interval = 1000
         episodes = 10000
 
@@ -196,7 +206,8 @@ class Model(object):
                 x_next = game.to_array()
                 V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
-                v, sigma, loss, _, summaries = self.sess.run([
+                global_step, v, sigma, loss, _, summaries = self.sess.run([
+                    self.global_step,
                     self.V,
                     self.sigma_op,
                     self.loss_op,
@@ -206,15 +217,15 @@ class Model(object):
                     self.x: x,
                     self.V_next: V_next
                 })
-                summary_writer.add_summary(summaries, global_step)
+                summary_writer.add_summary(summaries, global_step=global_step)
 
-                global_step += 1
                 episode_step += 1
 
             x = game.to_array()
             z = game.to_win_array()
 
-            v, accuracy, sigma, loss, _, summaries = self.sess.run([
+            global_step, v, accuracy, sigma, loss, _, summaries = self.sess.run([
+                self.global_step,
                 self.V,
                 self.accuracy_op,
                 self.sigma_op,
@@ -225,7 +236,7 @@ class Model(object):
                 self.x: x,
                 self.V_next: z
             })
-            summary_writer.add_summary(summaries, global_step)
+            summary_writer.add_summary(summaries, global_step=global_step)
             print('TRAIN GAME [{0}] => {1} {2} (accuracy: {3}, sigma: {4}, loss: {5})'.format(episode, np.around(v), z, accuracy, sigma, loss))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
