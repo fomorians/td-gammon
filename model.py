@@ -45,13 +45,13 @@ class Model(object):
         self.global_step = tf.Variable(0, trainable=False, name='global_step')
 
         # learning rate and lambda decay
-        self.alpha = tf.train.exponential_decay(0.1, self.global_step, \
-            20000, 0.96, staircase=True, name='alpha') # learning rate
-        self.lm = tf.train.exponential_decay(0.9, self.global_step, \
-            20000, 0.96, staircase=True, name='lambda') # lambda
+        self.alpha = tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
+            20000, 0.96, staircase=True), name='alpha') # learning rate
+        self.lm = tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
+            20000, 0.96, staircase=True, name='lambda')) # lambda
 
-        alpha_summary = tf.scalar_summary(self.alpha.name, self.alpha)
-        lm_summary = tf.scalar_summary(self.lm.name, self.lm)
+        alpha_summary = tf.scalar_summary('alpha', self.alpha)
+        lm_summary = tf.scalar_summary('lambda', self.lm)
 
         # setup some constants
         decay = 0.999 # ema decay rate
@@ -153,15 +153,17 @@ class Model(object):
         with tf.variable_scope('grad_updates'):
             for grad, tvar in zip(grads, tvars):
                 with tf.variable_scope('trace'):
-                    # e-> = lm * e-> + <grad of output w.r.t weights>
-                    #
+                    # e-> = lambda * e-> + <grad of output w.r.t weights>
+                    # lambda 0..1
+                    # trace +/-
+                    # grad +/-
                     trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
                     trace_op = trace.assign((self.lm * trace) + grad)
                     tf.histogram_summary(tvar.name + '/traces', trace)
 
                 # alpha 0..1
-                # sigma can be + or -
-                # trace can be + or -
+                # sigma +/-
+                # trace +/- (acc. grad.)
                 final_grad = self.alpha * sigma_op * trace_op
                 tf.histogram_summary(tvar.name + '/final', final_grad)
 
