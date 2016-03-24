@@ -17,7 +17,7 @@ from strategy import td_gammon_strategy
 
 model_path = os.environ.get('MODEL_PATH', 'models/')
 checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
-summary_path = os.environ.get('SUMMARY_PATH', 'logs/{0}'.format(int(time.time())))
+summary_path = os.environ.get('SUMMARY_PATH', 'logs/')
 
 if not os.path.exists(model_path):
     os.makedirs(model_path)
@@ -48,27 +48,25 @@ class Model(object):
         self.alpha = tf.train.exponential_decay(0.1, self.global_step, \
             20000, 0.96, staircase=True, name='alpha') # learning rate
         self.lm = tf.train.exponential_decay(0.9, self.global_step, \
-            20000, 0.96, staircase=True, name='lambda') #lambda
+            20000, 0.96, staircase=True, name='lambda') # lambda
 
-        tf.scalar_summary(self.alpha.name, self.alpha)
-        tf.scalar_summary(self.lm.name, self.lm)
+        alpha_summary = tf.scalar_summary(self.alpha.name, self.alpha)
+        lm_summary = tf.scalar_summary(self.lm.name, self.lm)
 
         # setup some constants
-        gamma = 1.0 # discount
-        reward = 0.0
         decay = 0.999 # ema decay rate
 
         # describe network size
         input_layer_size = 478
-        hidden_layer_size = 120
+        hidden_layer_size = 40
         output_layer_size = 1
 
         # placeholders for input and target output
-        self.x = tf.placeholder("float", [1, input_layer_size], name="x")
-        self.V_next = tf.placeholder("float", [1, output_layer_size], name="V_next")
+        self.x = tf.placeholder('float', [1, input_layer_size], name='x')
+        self.V_next = tf.placeholder('float', [1, output_layer_size], name='V_next')
 
         # build network arch. (just 2 layers with sigmoid activation)
-        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.nn.relu, name='layer1')
+        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
         self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
         # watch the individual value predictions over time
@@ -79,48 +77,61 @@ class Model(object):
         # tf.histogram_summary(self.V.name, self.V)
 
         # TODO: take the difference of vector containing win scenarios (incl. gammons)
-        # sigma = r + gamma * V_next - V
-        sigma_op = tf.reduce_sum(reward + (gamma * self.V_next) - self.V, name='sigma')
+        # sigma = V_next - V
+        sigma_op = tf.reduce_sum(self.V_next - self.V, name='sigma')
+        sigma_summary = tf.scalar_summary('sigma', sigma_op)
+
         sigma_ema = tf.train.ExponentialMovingAverage(decay=decay)
         sigma_ema_op = sigma_ema.apply([sigma_op])
+        sigma_ema_summary = tf.scalar_summary('sigma_ema', sigma_ema.average(sigma_op))
 
         # mean squared error of the difference between the next state and the current state
         loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
+        loss_summary = tf.scalar_summary('loss', loss_op)
+
         loss_ema = tf.train.ExponentialMovingAverage(decay=decay)
+        loss_ema_summary = tf.scalar_summary('loss_ema', loss_ema.average(loss_op))
         loss_ema_op = loss_ema.apply([loss_op])
 
         # check if the model predicts the correct winner
         accuracy_op = tf.reduce_sum(tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float'), name='accuracy')
+        accuracy_summary = tf.scalar_summary('accuracy', accuracy_op)
+
         accuracy_ema = tf.train.ExponentialMovingAverage(decay=decay)
         accuracy_ema_op = accuracy_ema.apply([accuracy_op])
-
-        tf.scalar_summary('sigma', sigma_op)
-        tf.scalar_summary('loss', loss_op)
-        tf.scalar_summary('accuracy', accuracy_op)
-
-        tf.scalar_summary('sigma_ema', sigma_ema.average(sigma_op))
-        tf.scalar_summary('loss_ema', loss_ema.average(loss_op))
-        tf.scalar_summary('accuracy_ema', accuracy_ema.average(accuracy_op))
+        accuracy_ema_summary = tf.scalar_summary('accuracy_ema', accuracy_ema.average(accuracy_op))
 
         # track the number of steps and average loss for the current game
         with tf.variable_scope('game'):
             game_step = tf.Variable(tf.constant(0.0), name='game_step', trainable=False)
             game_step_op = game_step.assign_add(1.0)
-            game_step_reset_op = game_step.assign(0.0)
 
             loss_sum = tf.Variable(tf.constant(0.0), name='loss_sum', trainable=False)
             loss_sum_op = loss_sum.assign_add(loss_op)
-            loss_avg_op = loss_sum / game_step
-            loss_sum_reset_op = loss_sum.assign(0.0)
+            loss_avg_op = loss_sum / tf.maximum(game_step, 1.0)
+            loss_avg_summary = tf.scalar_summary('game/loss_avg', loss_avg_op)
 
             loss_avg_ema = tf.train.ExponentialMovingAverage(decay=decay)
             loss_avg_ema_op = loss_avg_ema.apply([loss_avg_op])
-
-            tf.scalar_summary('game/loss_avg', loss_avg_op)
-            tf.scalar_summary('game/loss_ema', loss_avg_ema.average(loss_avg_op))
+            loss_avg_ema_summary = tf.scalar_summary('game/loss_avg_ema', loss_avg_ema.average(loss_avg_op))
 
             # reset per-game tracking variables
+            game_step_reset_op = game_step.assign(0.0)
+            loss_sum_reset_op = loss_sum.assign(0.0)
             self.reset_op = tf.group(*[loss_sum_reset_op, game_step_reset_op])
+
+        game_summaries = [
+            alpha_summary,
+            lm_summary,
+            sigma_summary,
+            loss_summary,
+            accuracy_summary,
+            sigma_ema_summary,
+            loss_ema_summary,
+            accuracy_ema_summary,
+            loss_avg_summary,
+            loss_avg_ema_summary
+        ]
 
         # increment global step: we keep this as a variable so it's saved with checkpoints
         global_step_op = self.global_step.assign_add(1)
@@ -132,22 +143,29 @@ class Model(object):
         grads = tf.gradients(self.V, tvars) # ys wrt x in xs
 
         # watch the weight and gradient distributions
-        for grad, var in zip(grads, tvars):
-            tf.histogram_summary(var.op.name, var)
-            tf.histogram_summary(var.op.name + '/gradients', grad)
+        for grad, tvar in zip(grads, tvars):
+            tf.histogram_summary(tvar.name, tvar)
+            tf.histogram_summary(tvar.name + '/gradients', grad)
 
-        # for each variable, define operations to update the var with sigma,
+        # for each variable, define operations to update the tvar with sigma,
         # taking into account the gradient as part of the eligibility trace
+        grad_updates = []
         with tf.variable_scope('grad_updates'):
-            grad_updates = []
-            for grad, var in zip(grads, tvars):
+            for grad, tvar in zip(grads, tvars):
                 with tf.variable_scope('trace'):
-                    # e-> = gamma * lm * e-> + <grad of output w.r.t weights>
+                    # e-> = lm * e-> + <grad of output w.r.t weights>
+                    #
                     trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
-                    trace_op = trace.assign(gamma * self.lm * trace + grad)
-                    tf.histogram_summary(var.op.name + '/traces', trace)
+                    trace_op = trace.assign((self.lm * trace) + grad)
+                    tf.histogram_summary(tvar.name + '/traces', trace)
 
-                assign_op = var.assign_add(self.alpha * sigma_op * trace_op)
+                # alpha 0..1
+                # sigma can be + or -
+                # trace can be + or -
+                final_grad = self.alpha * sigma_op * trace_op
+                tf.histogram_summary(tvar.name + '/final', final_grad)
+
+                assign_op = tvar.assign_add(final_grad)
                 grad_updates.append(assign_op)
 
         # define single operation to apply all gradient updates
@@ -157,12 +175,14 @@ class Model(object):
             loss_sum_op,
             sigma_ema_op,
             loss_ema_op,
-            accuracy_ema_op
+            accuracy_ema_op,
+            loss_avg_ema_op
         ]):
-            self.train_op = tf.group(*grad_updates, name="train")
+            self.train_op = tf.group(*grad_updates, name='train')
 
         # merge summaries for TensorBoard
-        self.summary_op = tf.merge_all_summaries()
+        self.game_summaries_op = tf.merge_summary(game_summaries)
+        self.summaries_op = tf.merge_all_summaries()
 
         # create a saver for periodic checkpoints
         self.saver = tf.train.Saver(max_to_keep=1)
@@ -214,14 +234,16 @@ class Model(object):
 
     def train(self):
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
-        summary_writer = tf.train.SummaryWriter(summary_path, self.sess.graph_def)
+
+        summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), self.sess.graph_def))
+        summary_writer_game = tf.train.SummaryWriter('{0}{1}_game'.format(summary_path, int(time.time())), self.sess.graph_def)
 
         model_strategy = partial(td_gammon_strategy, self)
         white = PlayerStrategy(Player.WHITE, model_strategy)
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         test_interval = 1000
-        episodes = 10000
+        episodes = 1000
 
         for episode in range(episodes):
             if episode != 0 and episode % test_interval == 0:
@@ -236,26 +258,29 @@ class Model(object):
                 x_next = game.to_array()
                 V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
 
-                _, summaries, global_step = self.sess.run([
+                _, global_step, summaries = self.sess.run([
                     self.train_op,
-                    self.summary_op,
-                    self.global_step
+                    self.global_step,
+                    self.summaries_op
                 ], feed_dict={ self.x: x, self.V_next: V_next })
                 summary_writer.add_summary(summaries, global_step=global_step)
 
             x = game.to_array()
             z = game.to_win_array()
 
-            _, summaries, _, global_step = self.sess.run([
+            _, global_step, summaries, summaries_game, _ = self.sess.run([
                 self.train_op,
-                self.summary_op,
-                self.reset_op,
-                self.global_step
+                self.global_step,
+                self.summaries_op,
+                self.game_summaries_op,
+                self.reset_op
             ], feed_dict={ self.x: x, self.V_next: z })
             summary_writer.add_summary(summaries, global_step=global_step)
+            summary_writer_game.add_summary(summaries_game, global_step=episode)
 
             print('TRAIN GAME [{0}]'.format(episode))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
+        summary_writer_game.close()
         self.test(episodes=1000)
