@@ -6,14 +6,9 @@ import random
 import numpy as np
 import tensorflow as tf
 
-from functools import partial, reduce
-
 from backgammon.game import Game
-from backgammon.player import Player
-from backgammon.player_strategy import PlayerStrategy
-from backgammon.strategy import random_strategy
-
-from strategy import td_gammon_strategy
+from backgammon.agents.random_agent import RandomAgent
+from backgammon.agents.td_gammon_agent import TDAgent
 
 model_path = os.environ.get('MODEL_PATH', 'models/')
 checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
@@ -57,7 +52,7 @@ class Model(object):
         decay = 0.999 # ema decay rate
 
         # describe network size
-        input_layer_size = 478
+        input_layer_size = 294
         hidden_layer_size = 40
         output_layer_size = 1
 
@@ -199,40 +194,27 @@ class Model(object):
                 print('Restoring checkpoint: {0}'.format(latest_checkpoint_path))
                 self.saver.restore(self.sess, latest_checkpoint_path)
 
-    def get_output(self, game):
-        return self.sess.run(self.V, feed_dict={ self.x: game.to_array() })
-
-    def play(self):
-        strategy = partial(td_gammon_strategy, self)
-
-        white = PlayerStrategy(Player.WHITE, strategy)
-        black = PlayerHuman()
-
-        game = Game(white, black)
-        game.play()
+    def get_output(self, x):
+        return self.sess.run(self.V, feed_dict={ self.x: x })
 
     def test(self, episodes=100):
-        wins_td = 0 # TD-gammon
-        wins_rand = 0 # random
+        players = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
+        winners = [0, 0]
+        for _ in range(episodes):
+            game = Game(Game.LAYOUT)
+            game.new_game()
 
-        player_td = PlayerStrategy(Player.WHITE, partial(td_gammon_strategy, self))
-        player_gammon = PlayerStrategy(Player.BLACK, random_strategy)
+            player_num = random.randint(0, 1)
+            while not game.is_over():
+                game.next_step(players[player_num], player_num, draw=False)
+                player_num = (player_num + 1) % 2
 
-        for episode in range(episodes):
-            white, black = random.sample([player_td, player_gammon], 2)
-            game = Game(white, black)
+            winner = game.winner()
+            winners[not winner] += 1
 
-            while not game.board.finished():
-                game.next(draw_board=False)
-
-            if (game.winner == Player.WHITE and game.white == player_td) \
-            or (game.winner == Player.BLACK and game.black == player_td):
-                wins_td += 1
-            else:
-                wins_rand += 1
-
-            win_ratio = wins_td / wins_rand if wins_rand > 0 else wins_td
-            print('TEST GAME [{0}] => Ratio: {1}, TD-Gammon: {2}, Random: {3}'.format(episode, win_ratio, wins_td, wins_rand))
+            os.system('clear')
+            print("Player %s: %d/%d" % (players[0].player, winners[0], sum(winners)))
+            print("Player %s: %d/%d" % (players[1].player, winners[1], sum(winners)))
 
     def train(self):
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
@@ -240,35 +222,40 @@ class Model(object):
         summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), self.sess.graph_def))
         summary_writer_game = tf.train.SummaryWriter('{0}{1}_game'.format(summary_path, int(time.time())), self.sess.graph_def)
 
-        model_strategy = partial(td_gammon_strategy, self)
-        white = PlayerStrategy(Player.WHITE, model_strategy)
-        black = PlayerStrategy(Player.BLACK, model_strategy)
+        players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
 
-        test_interval = 1000
+        validation_interval = 1000
         episodes = 20000
 
         for episode in range(episodes):
-            if episode != 0 and episode % test_interval == 0:
+            if episode != 1 and episode % validation_interval == 0:
                 self.test(episodes=100)
 
-            game = Game(white, black)
+            game = Game(Game.LAYOUT)
+            game.new_game()
 
-            while not game.board.finished():
-                x = game.to_array()
+            player_num = random.randint(0, 1)
+            x = game.extract_features(players[player_num].player)
 
-                game.next(draw_board=False)
-                x_next = game.to_array()
-                V_next = self.sess.run(self.V, feed_dict={ self.x: x_next })
+            game_step = 0
+            while not game.is_over():
+                game.next_step(player_num)
 
+                x_next = game.extract_features(players[player_num].player)
+                V_next = self.get_output(x_next)
                 _, global_step, summaries = self.sess.run([
                     self.train_op,
                     self.global_step,
                     self.summaries_op
                 ], feed_dict={ self.x: x, self.V_next: V_next })
+
                 summary_writer.add_summary(summaries, global_step=global_step)
 
-            x = game.to_array()
-            z = game.to_win_array()
+                x = x_next
+                game_step += 1
+                player_num = (player_num + 1) % 2
+
+            winner = game.winner()
 
             _, global_step, summaries, summaries_game, _ = self.sess.run([
                 self.train_op,
@@ -276,11 +263,12 @@ class Model(object):
                 self.summaries_op,
                 self.game_summaries_op,
                 self.reset_op
-            ], feed_dict={ self.x: x, self.V_next: z })
+            ], feed_dict={ self.x: x, self.V_next: np.array([[winner]]) })
             summary_writer.add_summary(summaries, global_step=global_step)
             summary_writer_game.add_summary(summaries_game, global_step=episode)
 
-            print('TRAIN GAME [{0}]'.format(episode))
+            print "Game : %d/%d in %d turns" % (episode, episodes, game_step)
+
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
