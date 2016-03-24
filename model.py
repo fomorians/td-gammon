@@ -245,7 +245,7 @@ class Model(object):
         black = PlayerStrategy(Player.BLACK, model_strategy)
 
         test_interval = 1000
-        episodes = 1000
+        episodes = 20000
 
         for episode in range(episodes):
             if episode != 0 and episode % test_interval == 0:
