@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import division
 
 import os
@@ -228,7 +229,7 @@ class Model(object):
         episodes = 20000
 
         for episode in range(episodes):
-            if episode != 1 and episode % validation_interval == 0:
+            if episode != 0 and episode % validation_interval == 0:
                 self.test(episodes=100)
 
             game = Game(Game.LAYOUT)
@@ -239,9 +240,10 @@ class Model(object):
 
             game_step = 0
             while not game.is_over():
-                game.next_step(player_num)
+                player = players[player_num]
+                game.next_step(player, player_num)
 
-                x_next = game.extract_features(players[player_num].player)
+                x_next = game.extract_features(player.player)
                 V_next = self.get_output(x_next)
                 _, global_step, summaries = self.sess.run([
                     self.train_op,
@@ -267,7 +269,7 @@ class Model(object):
             summary_writer.add_summary(summaries, global_step=global_step)
             summary_writer_game.add_summary(summaries_game, global_step=episode)
 
-            print "Game : %d/%d in %d turns" % (episode, episodes, game_step)
+            print("Game: %d/%d in %d turns" % (episode, episodes, game_step))
 
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 

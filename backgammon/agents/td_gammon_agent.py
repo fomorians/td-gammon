@@ -16,12 +16,12 @@ class TDAgent(Agent, object):
         a_best = None
 
         for a in actions:
-            ateList = game.takeAction(a, self.player)
+            ateList = game.take_action(a, self.player)
             features = game.extract_features(game.opponent(self.player))
             v = self.model.get_output(features)
             if v > v_best:
                 v_best = v
                 a_best = a
-            game.undoAction(a, self.player, ateList)
+            game.undo_action(a, self.player, ateList)
 
         return a_best
