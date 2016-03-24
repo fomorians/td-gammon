@@ -90,8 +90,8 @@ class Model(object):
         loss_summary = tf.scalar_summary('loss', loss_op)
 
         loss_ema = tf.train.ExponentialMovingAverage(decay=decay)
-        loss_ema_summary = tf.scalar_summary('loss_ema', loss_ema.average(loss_op))
         loss_ema_op = loss_ema.apply([loss_op])
+        loss_ema_summary = tf.scalar_summary('loss_ema', loss_ema.average(loss_op))
 
         # check if the model predicts the correct winner
         accuracy_op = tf.reduce_sum(tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float'), name='accuracy')
