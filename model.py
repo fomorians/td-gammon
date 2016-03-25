@@ -42,10 +42,10 @@ class Model(object):
         self.global_step = tf.Variable(0, trainable=False, name='global_step')
 
         # learning rate and lambda decay
-        self.alpha = tf.Variable(tf.constant(0.1), trainable=False, name="alpha") # tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
-            # 10000, 0.96, staircase=True), name='alpha') # learning rate
-        self.lm = tf.Variable(tf.constant(0.7), trainable=False, name="lambda") # tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
-            # 10000, 0.96, staircase=True, name='lambda')) # lambda
+        self.alpha = tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
+            10000, 0.96, staircase=True), name='alpha') # learning rate
+        self.lm = tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
+            10000, 0.96, staircase=True, name='lambda')) # lambda
 
         alpha_summary = tf.scalar_summary('alpha', self.alpha)
         lm_summary = tf.scalar_summary('lambda', self.lm)
@@ -209,7 +209,7 @@ class Model(object):
     def test(self, episodes=100):
         players = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
         winners = [0, 0]
-        for _ in range(episodes):
+        for episode in range(episodes):
             game = Game()
             game.reset()
 
@@ -222,8 +222,8 @@ class Model(object):
             winners[not winner] += 1
 
             os.system('clear')
-            print("Player %s (TD-Gammon): %d/%d" % (players[0].player, winners[0], sum(winners)))
-            print("Player %s (Random): %d/%d" % (players[1].player, winners[1], sum(winners)))
+            print("[Episode %d] (Player %s, %s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
+            print("[Episode %d] (Player %s, %s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))
 
     def train(self):
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
@@ -232,7 +232,7 @@ class Model(object):
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
 
         validation_interval = 1000
-        episodes = 20000
+        episodes = 5000
 
         for episode in range(episodes):
             if episode != 0 and episode % validation_interval == 0:
