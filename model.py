@@ -203,22 +203,22 @@ class Model(object):
         players_test = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
 
         validation_interval = 1000
-        episodes = 2000
+        max_episodes = 2000
+        parallelism = 100
+        episodes = 0
 
-        for episode in range(episodes):
-            if episode != 0 and episode % validation_interval == 0:
-                evaluation.test(players_test, episodes=100)
-
-            game = Game()
-            game.reset()
-
+        games = []
+        for i in range(parallelism):
             player_num = random.randint(0, 1)
             player = players[player_num]
+            game = Game()
+            game.reset()
+            games.append((game, player))
 
-            x = game.extract_features(player.player)
+        while episodes < max_episodes:
+            for game, player in games:
+                x = game.extract_features(player.player)
 
-            game_step = 0
-            while not game.is_over():
                 game.next_step(player, player_num)
 
                 player_num = (player_num + 1) % 2
@@ -232,20 +232,29 @@ class Model(object):
                 ], feed_dict={ self.x: x, self.V_next: V_next })
 
                 x = x_next
-                game_step += 1
 
-            winner = game.winner()
+                if game.is_over():
+                    winner = game.winner()
+                    games.remove(game)
 
-            _, global_step, summaries, _ = self.sess.run([
-                self.train_op,
-                self.global_step,
-                self.summaries_op,
-                self.reset_op
-            ], feed_dict={ self.x: x, self.V_next: np.array([[winner]]) })
-            summary_writer.add_summary(summaries, global_step=episode)
+                    player_num = random.randint(0, 1)
+                    player = players[player_num]
+                    game = Game()
+                    game.reset()
+                    games.append((game, player))
 
-            print("Game %d/%d in %d turns" % (episode, episodes, game_step))
-            self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
+                    _, global_step, summaries, _ = self.sess.run([
+                        self.train_op,
+                        self.global_step,
+                        self.summaries_op,
+                        self.reset_op
+                    ], feed_dict={ self.x: x, self.V_next: np.array([[winner]]) })
+                    summary_writer.add_summary(summaries, global_step=episode)
+
+                    episodes += 1
+
+                    print("Game %d/%d in %d turns" % (episode, episodes))
+                    self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
 
