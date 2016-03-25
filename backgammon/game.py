@@ -39,8 +39,6 @@ import game
 g = game.Game(game.LAYOUT)
 dir(g)
 """
-from __future__ import print_function
-
 import os
 import copy
 import time
@@ -54,7 +52,7 @@ class Game:
     QUAD = 6
     OFF = 'off'
     ON = 'on'
-    TOKENS = ['o', 'x']
+    TOKENS = ['x', 'o']
 
     def __init__(self, layout=LAYOUT, grid=None, off_pieces=None, bar_pieces=None, num_pieces=None, players=None):
         """
@@ -101,6 +99,7 @@ class Game:
 
     def next_step(self, player, player_num, draw=False):
         roll = self.roll_dice()
+
         if draw:
             self.draw()
             print("Player %s rolled <%d, %d>." % (player.player, roll[0], roll[1]))
@@ -344,39 +343,38 @@ class Game:
                 return True
         return False
 
-
-    def draw_col(self, i, col):
-        print("|", end="")
-        if i == -2:
-            if col < 10:
-                print("", end="")
-            print(str(col), end="")
-        elif i == -1:
-            print("--", end="")
-        elif len(self.grid[col]) > i:
-            print(" " + self.grid[col][i], end="")
+    def draw_col(self,i,col):
+        print "|",
+        if i==-2:
+            if col<10:
+                print "",
+            print str(col),
+        elif i==-1:
+            print "--",
+        elif len(self.grid[col])>i:
+            print " "+self.grid[col][i],
         else:
-            print("  ", end="")
+            print "  ",
 
     def draw(self):
         os.system('clear')
-        largest = max([len(self.grid[i]) for i in range(len(self.grid) / 2, len(self.grid))])
-        for i in range(-2, largest):
-            for col in range(len(self.grid) / 2, len(self.grid)):
-                self.draw_col(i, col)
-            print("|")
-        print()
-        print()
-        largest = max([len(self.grid[i]) for i in range(len(self.grid) / 2)])
-        for i in range(largest - 1, -3, -1):
-            for col in range(len(self.grid)/2-1, -1, -1):
-                self.draw_col(i, col)
-            print("|")
+        largest = max([len(self.grid[i]) for i in range(len(self.grid)/2,len(self.grid))])
+        for i in range(-2,largest):
+            for col in range(len(self.grid)/2,len(self.grid)):
+                self.draw_col(i,col)
+            print "|"
+        print
+        print
+        largest = max([len(self.grid[i]) for i in range(len(self.grid)/2)])
+        for i in range(largest-1,-3,-1):
+            for col in range(len(self.grid)/2-1,-1,-1):
+                self.draw_col(i,col)
+            print "|"
         for t in self.players:
-            print("<Player %s>  Off Board : " % (t), end="")
+            print "<Player %s>  Off Board : "%(t),
             for piece in self.off_pieces[t]:
-                print(t + '', end="")
-            print("   Bar : ", end="")
+                print t+'',
+            print "   Bar : ",
             for piece in self.bar_pieces[t]:
-                print(t + '', end="")
-            print()
+                print t+'',
+            print
