@@ -61,7 +61,7 @@ class Model(object):
         self.V_next = tf.placeholder('float', [1, output_layer_size], name='V_next')
 
         # build network arch. (just 2 layers with sigmoid activation)
-        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.sigmoid, name='layer1')
+        prev_y = dense_layer(self.x, input_layer_size, hidden_layer_size, tf.nn.relu, name='layer1')
         self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
         # watch the individual value predictions over time
