@@ -52,7 +52,7 @@ class Model(object):
 
         # describe network size
         input_layer_size = 294
-        hidden_layer_size = 40
+        hidden_layer_size = 50
         output_layer_size = 1
 
         # placeholders for input and target output
