@@ -101,7 +101,7 @@ class Model(object):
             loss_avg_op = loss_sum / tf.maximum(game_step, 1.0)
             loss_avg_summary = tf.scalar_summary('game/loss_avg', loss_avg_op)
 
-            loss_avg_ema = tf.train.ExponentialMovingAverage(decay=decay)
+            loss_avg_ema = tf.train.ExponentialMovingAverage(decay=0.999)
             loss_avg_ema_op = loss_avg_ema.apply([loss_avg_op])
             loss_avg_ema_summary = tf.scalar_summary('game/loss_avg_ema', loss_avg_ema.average(loss_avg_op))
 
