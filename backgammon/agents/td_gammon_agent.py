@@ -6,6 +6,7 @@ class TDAgent(Agent, object):
     def __init__(self, player, model):
         self.player = player
         self.model = model
+        self.name = 'TD-Gammon'
 
     def getAction(self, actions, game):
         """

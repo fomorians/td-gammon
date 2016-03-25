@@ -1,6 +1,10 @@
 from agent import Agent
 
 class HumanAgent(Agent):
+    def __init__(self, player):
+        self.player = player
+        self.name = 'Human'
+
     def getAction(self, moves, game=None):
         if not moves:
             raw_input("No moves for you...(hit enter)")
