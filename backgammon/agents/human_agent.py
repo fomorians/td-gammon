@@ -1,3 +1,5 @@
+from agent import Agent
+
 class HumanAgent(Agent):
     def getAction(self, moves, game=None):
         if not moves:
