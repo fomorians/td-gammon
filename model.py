@@ -248,6 +248,9 @@ class Model(object):
             while not game.is_over():
                 game.next_step(player, player_num)
 
+                player_num = (player_num + 1) % 2
+                player = players[player_num]
+
                 x_next = game.extract_features(player.player)
                 V_next = self.get_output(x_next)
                 _, global_step = self.sess.run([
