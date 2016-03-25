@@ -9,7 +9,6 @@ import numpy as np
 import tensorflow as tf
 
 from backgammon.game import Game
-from backgammon.agents.human_agent import HumanAgent
 from backgammon.agents.random_agent import RandomAgent
 from backgammon.agents.td_gammon_agent import TDAgent
 
