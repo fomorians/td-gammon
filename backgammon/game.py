@@ -43,6 +43,7 @@ from __future__ import print_function
 
 import os
 import copy
+import time
 import random
 import numpy as np
 
@@ -103,6 +104,7 @@ class Game:
         if draw:
             self.draw()
             print("Player %s rolled <%d, %d>." % (player.player, roll[0], roll[1]))
+            time.sleep(3)
 
         if player_num:
             self.reverse()

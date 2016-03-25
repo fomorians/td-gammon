@@ -248,6 +248,9 @@ class Model(object):
             while not game.is_over():
                 game.next_step(player, player_num)
 
+                player_num = (player_num + 1) % 2
+                player = players[player_num]
+
                 x_next = game.extract_features(player.player)
                 V_next = self.get_output(x_next)
                 _, global_step, summaries = self.sess.run([
@@ -257,9 +260,6 @@ class Model(object):
                 ], feed_dict={ self.x: x, self.V_next: V_next })
 
                 summary_writer.add_summary(summaries, global_step=global_step)
-
-                player_num = (player_num + 1) % 2
-                player = players[player_num]
 
                 x = x_next
                 game_step += 1
@@ -274,7 +274,7 @@ class Model(object):
             ], feed_dict={ self.x: x, self.V_next: np.array([[winner]]) })
             summary_writer.add_summary(summaries, global_step=episode)
 
-            print("Game: %d/%d in %d turns" % (episode, episodes, game_step))
+            print("Game %d/%d in %d turns" % (episode, episodes, game_step))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
