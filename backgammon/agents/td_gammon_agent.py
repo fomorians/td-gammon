@@ -7,7 +7,7 @@ class TDAgent(object):
         self.model = model
         self.name = 'TD-Gammon'
 
-    def getAction(self, actions, game):
+    def get_action(self, actions, game):
         """
         Return best action according to self.evaluationFunction,
         with no lookahead.
