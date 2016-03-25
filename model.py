@@ -71,17 +71,9 @@ class Model(object):
         sigma_op = tf.reduce_sum(self.V_next - self.V, name='sigma')
         sigma_summary = tf.scalar_summary('sigma', sigma_op)
 
-        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
-        sigma_ema_op = sigma_ema.apply([sigma_op])
-        sigma_ema_summary = tf.scalar_summary('sigma_ema', sigma_ema.average(sigma_op))
-
         # mean squared error of the difference between the next state and the current state
         loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         loss_summary = tf.scalar_summary('loss', loss_op)
-
-        loss_ema = tf.train.ExponentialMovingAverage(decay=0.999)
-        loss_ema_op = loss_ema.apply([loss_op])
-        loss_ema_summary = tf.scalar_summary('loss_ema', loss_ema.average(loss_op))
 
         # check if the model predicts the correct winner
         accuracy_op = tf.reduce_sum(tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float'), name='accuracy')
@@ -90,6 +82,14 @@ class Model(object):
         accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         accuracy_ema_op = accuracy_ema.apply([accuracy_op])
         accuracy_ema_summary = tf.scalar_summary('accuracy_ema', accuracy_ema.average(accuracy_op))
+
+        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        sigma_ema_op = sigma_ema.apply([sigma_op])
+        sigma_ema_summary = tf.scalar_summary('sigma_ema', sigma_ema.average(sigma_op))
+
+        loss_ema = tf.train.ExponentialMovingAverage(decay=0.999)
+        loss_ema_op = loss_ema.apply([loss_op])
+        loss_ema_summary = tf.scalar_summary('loss_ema', loss_ema.average(loss_op))
 
         # track the number of steps and average loss for the current game
         with tf.variable_scope('game'):
@@ -101,9 +101,27 @@ class Model(object):
             loss_avg_op = loss_sum / tf.maximum(game_step, 1.0)
             loss_avg_summary = tf.scalar_summary('game/loss_avg', loss_avg_op)
 
+            sigma_sum = tf.Variable(tf.constant(0.0), name='sigma_sum', trainable=False)
+            sigma_sum_op = sigma_sum.assign_add(sigma_op)
+            sigma_avg_op = sigma_sum / tf.maximum(game_step, 1.0)
+            sigma_avg_summary = tf.scalar_summary('game/sigma_avg', sigma_avg_op)
+
+            accuracy_sum = tf.Variable(tf.constant(0.0), name='accuracy_sum', trainable=False)
+            accuracy_sum_op = accuracy_sum.assign_add(accuracy_op)
+            accuracy_avg_op = accuracy_sum / tf.maximum(game_step, 1.0)
+            accuracy_avg_summary = tf.scalar_summary('game/accuracy_avg', accuracy_avg_op)
+
             loss_avg_ema = tf.train.ExponentialMovingAverage(decay=0.999)
             loss_avg_ema_op = loss_avg_ema.apply([loss_avg_op])
             loss_avg_ema_summary = tf.scalar_summary('game/loss_avg_ema', loss_avg_ema.average(loss_avg_op))
+
+            sigma_avg_ema = tf.train.ExponentialMovingAverage(decay=0.999)
+            sigma_avg_ema_op = sigma_avg_ema.apply([sigma_avg_op])
+            sigma_avg_ema_summary = tf.scalar_summary('game/sigma_avg_ema', sigma_avg_ema.average(sigma_avg_op))
+
+            accuracy_avg_ema = tf.train.ExponentialMovingAverage(decay=0.999)
+            accuracy_avg_ema_op = accuracy_avg_ema.apply([accuracy_avg_op])
+            accuracy_avg_ema_summary = tf.scalar_summary('game/accuracy_avg_ema', accuracy_avg_ema.average(accuracy_avg_op))
 
             # reset per-game tracking variables
             game_step_reset_op = game_step.assign(0.0)
@@ -150,7 +168,9 @@ class Model(object):
             sigma_ema_op,
             loss_ema_op,
             accuracy_ema_op,
-            loss_avg_ema_op
+            loss_avg_ema_op,
+            sigma_avg_ema_op,
+            accuracy_avg_ema_op
         ]):
             # define single operation to apply all gradient updates
             self.train_op = tf.group(*grad_updates, name='train')
