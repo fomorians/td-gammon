@@ -195,13 +195,14 @@ class Model(object):
 
         # the agent plays against itself, making the best move for each player
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
+        players_test = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
 
         validation_interval = 1000
         episodes = 5000
 
         for episode in range(episodes):
             if episode != 0 and episode % validation_interval == 0:
-                evaluation.test(players, episodes=100)
+                evaluation.test(players_test, episodes=100)
 
             game = Game()
             game.reset()
@@ -242,4 +243,5 @@ class Model(object):
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
-        evaluation.test(players, episodes=1000)
+
+        evaluation.test(players_test, episodes=1000)
