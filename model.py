@@ -42,9 +42,9 @@ class Model(object):
         self.global_step = tf.Variable(0, trainable=False, name='global_step')
 
         # learning rate and lambda decay
-        self.alpha = tf.Variable(tf.constant(0.1)) # tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
+        self.alpha = tf.Variable(tf.constant(0.1), trainable=False, name="alpha") # tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
             # 10000, 0.96, staircase=True), name='alpha') # learning rate
-        self.lm = tf.Variable(tf.constant(0.7)) # tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
+        self.lm = tf.Variable(tf.constant(0.7), trainable=False, name="lambda") # tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
             # 10000, 0.96, staircase=True, name='lambda')) # lambda
 
         alpha_summary = tf.scalar_summary('alpha', self.alpha)
