@@ -4,8 +4,6 @@ import tensorflow as tf
 from model import Model
 
 from backgammon.game import Game
-from backgammon.agents.human_agent import HumanAgent
-from backgammon.agents.random_agent import RandomAgent
 from backgammon.agents.td_gammon_agent import TDAgent
 
 flags = tf.app.flags
@@ -20,10 +18,12 @@ if __name__ == '__main__':
     sess = tf.Session(graph=graph)
     with sess.as_default(), graph.as_default():
         if FLAGS.test:
+            from backgammon.agents.random_agent import RandomAgent
             model = Model(sess, restore=True)
             players = [TDAgent(Game.TOKENS[0], model), RandomAgent(Game.TOKENS[1])]
             evaluation.test(players, episodes=1000)
         elif FLAGS.play:
+            from backgammon.agents.human_agent import HumanAgent
             model = Model(sess, restore=True)
             players = [TDAgent(Game.TOKENS[0], model), HumanAgent(Game.TOKENS[1])]
             evaluation.play(players)
