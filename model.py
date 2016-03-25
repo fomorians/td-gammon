@@ -204,7 +204,7 @@ class Model(object):
         players_test = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
 
         validation_interval = 1000
-        episodes = 5000
+        episodes = 2000
 
         for episode in range(episodes):
             if episode != 0 and episode % validation_interval == 0:
