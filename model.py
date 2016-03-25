@@ -13,8 +13,8 @@ from backgammon.agents.random_agent import RandomAgent
 from backgammon.agents.td_gammon_agent import TDAgent
 
 model_path = os.environ.get('MODEL_PATH', 'models/')
-checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
 summary_path = os.environ.get('SUMMARY_PATH', 'logs/')
+checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
 
 if not os.path.exists(model_path):
     os.makedirs(model_path)
@@ -69,16 +69,14 @@ class Model(object):
 
         # sigma = V_next - V
         sigma_op = tf.reduce_sum(self.V_next - self.V, name='sigma')
-        sigma_summary = tf.scalar_summary('sigma', sigma_op)
+        tf.scalar_summary('sigma', sigma_op)
 
         # mean squared error of the difference between the next state and the current state
         loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
-        loss_summary = tf.scalar_summary('loss', loss_op)
+        tf.scalar_summary('loss', loss_op)
 
         # check if the model predicts the correct winner
         accuracy_op = tf.reduce_sum(tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float'), name='accuracy')
-        accuracy_summary = tf.scalar_summary('accuracy', accuracy_op)
-
         accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         accuracy_ema_op = accuracy_ema.apply([accuracy_op])
         accuracy_ema_summary = tf.scalar_summary('accuracy_ema', accuracy_ema.average(accuracy_op))
@@ -222,8 +220,8 @@ class Model(object):
             winners[not winner] += 1
 
             os.system('clear')
-            print("[Episode %d] (Player %s, %s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
-            print("[Episode %d] (Player %s, %s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))
+            print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
+            print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))
 
     def train(self):
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
