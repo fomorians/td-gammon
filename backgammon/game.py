@@ -55,7 +55,7 @@ class Game:
     ON = 'on'
     TOKENS = ['o', 'x']
 
-    def __init__(self, layout=None, grid=None, off_pieces=None, bar_pieces=None, num_pieces=None, players=None):
+    def __init__(self, layout=Game.LAYOUT, grid=None, off_pieces=None, bar_pieces=None, num_pieces=None, players=None):
         """
         Define a new game object
         """
@@ -268,7 +268,7 @@ class Game:
         self.grid.reverse()
         self.players.reverse()
 
-    def new_game(self):
+    def reset(self):
         """
         Resets game to original layout.
         """
