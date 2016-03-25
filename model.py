@@ -146,14 +146,8 @@ class Model(object):
         grad_updates = []
         with tf.variable_scope('grad_updates'):
             for grad, tvar in zip(grads, tvars):
-                with tf.variable_scope('trace'):
-                    # e-> = lambda * e-> + <grad of output w.r.t weights>
-                    trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
-                    trace_op = trace.assign((self.lm * trace) + grad)
-                    tf.histogram_summary(tvar.name + '/traces', trace)
-
                 # final grad = alpha * sigma * e
-                final_grad = self.alpha * sigma_op * trace_op
+                final_grad = self.alpha * sigma_op * grad
                 tf.histogram_summary(tvar.name + '/gradients/final', final_grad)
 
                 assign_op = tvar.assign_add(final_grad)
