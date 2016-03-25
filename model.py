@@ -64,18 +64,14 @@ class Model(object):
         self.V = dense_layer(prev_y, hidden_layer_size, output_layer_size, tf.sigmoid, name='layer2')
 
         # watch the individual value predictions over time
-        tf.scalar_summary('V_next/sum', tf.reduce_sum(self.V_next))
-        tf.scalar_summary('V/sum', tf.reduce_sum(self.V))
+        tf.scalar_summary('V_next', tf.reduce_sum(self.V_next))
+        tf.scalar_summary('V', tf.reduce_sum(self.V))
 
-        # tf.histogram_summary(self.V_next.name, self.V_next)
-        # tf.histogram_summary(self.V.name, self.V)
-
-        # TODO: take the difference of vector containing win scenarios (incl. gammons)
         # sigma = V_next - V
         sigma_op = tf.reduce_sum(self.V_next - self.V, name='sigma')
         sigma_summary = tf.scalar_summary('sigma', sigma_op)
 
-        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.999)
+        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
         sigma_ema_op = sigma_ema.apply([sigma_op])
         sigma_ema_summary = tf.scalar_summary('sigma_ema', sigma_ema.average(sigma_op))
 
@@ -126,7 +122,7 @@ class Model(object):
         # watch the weight and gradient distributions
         for grad, tvar in zip(grads, tvars):
             tf.histogram_summary(tvar.name, tvar)
-            tf.histogram_summary(tvar.name + '/gradients', grad)
+            tf.histogram_summary(tvar.name + '/gradients/original', grad)
 
         # for each variable, define operations to update the tvar with sigma,
         # taking into account the gradient as part of the eligibility trace
@@ -146,7 +142,7 @@ class Model(object):
                 # sigma +/-
                 # trace +/- (acc. grad.)
                 final_grad = self.alpha * sigma_op * trace_op
-                tf.histogram_summary(tvar.name + '/final', final_grad)
+                tf.histogram_summary(tvar.name + '/gradients/final', final_grad)
 
                 assign_op = tvar.assign_add(final_grad)
                 grad_updates.append(assign_op)
