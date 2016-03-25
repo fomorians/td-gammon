@@ -43,15 +43,12 @@ class Model(object):
 
         # learning rate and lambda decay
         self.alpha = tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
-            20000, 0.96, staircase=True), name='alpha') # learning rate
+            10000, 0.96, staircase=True), name='alpha') # learning rate
         self.lm = tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
-            20000, 0.96, staircase=True, name='lambda')) # lambda
+            10000, 0.96, staircase=True, name='lambda')) # lambda
 
         alpha_summary = tf.scalar_summary('alpha', self.alpha)
         lm_summary = tf.scalar_summary('lambda', self.lm)
-
-        # setup some constants
-        decay = 0.999 # ema decay rate
 
         # describe network size
         input_layer_size = 294
@@ -78,7 +75,7 @@ class Model(object):
         sigma_op = tf.reduce_sum(self.V_next - self.V, name='sigma')
         sigma_summary = tf.scalar_summary('sigma', sigma_op)
 
-        sigma_ema = tf.train.ExponentialMovingAverage(decay=decay)
+        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         sigma_ema_op = sigma_ema.apply([sigma_op])
         sigma_ema_summary = tf.scalar_summary('sigma_ema', sigma_ema.average(sigma_op))
 
@@ -86,7 +83,7 @@ class Model(object):
         loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
         loss_summary = tf.scalar_summary('loss', loss_op)
 
-        loss_ema = tf.train.ExponentialMovingAverage(decay=decay)
+        loss_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         loss_ema_op = loss_ema.apply([loss_op])
         loss_ema_summary = tf.scalar_summary('loss_ema', loss_ema.average(loss_op))
 
@@ -94,7 +91,7 @@ class Model(object):
         accuracy_op = tf.reduce_sum(tf.cast(tf.equal(tf.round(self.V_next), tf.round(self.V)), dtype='float'), name='accuracy')
         accuracy_summary = tf.scalar_summary('accuracy', accuracy_op)
 
-        accuracy_ema = tf.train.ExponentialMovingAverage(decay=decay)
+        accuracy_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         accuracy_ema_op = accuracy_ema.apply([accuracy_op])
         accuracy_ema_summary = tf.scalar_summary('accuracy_ema', accuracy_ema.average(accuracy_op))
 
@@ -211,8 +208,8 @@ class Model(object):
             winners[not winner] += 1
 
             os.system('clear')
-            print("Player %s: %d/%d" % (players[0].player, winners[0], sum(winners)))
-            print("Player %s: %d/%d" % (players[1].player, winners[1], sum(winners)))
+            print("Player %s (TD-Gammon): %d/%d" % (players[0].player, winners[0], sum(winners)))
+            print("Player %s (Random): %d/%d" % (players[1].player, winners[1], sum(winners)))
 
     def train(self):
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
