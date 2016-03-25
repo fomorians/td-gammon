@@ -102,20 +102,14 @@ class Game:
 
         if draw:
             self.draw()
+            print(player.player, player_num, player)
             print("Player %s rolled <%d, %d>." % (player.player, roll[0], roll[1]))
-            time.sleep(3)
 
-        if player_num:
-            self.reverse()
-
-        moves = self.get_actions(roll, self.players[0], nodups=True)
-        move = player.getAction(moves, self) if moves else None
+        moves = self.get_actions(roll, player.player, nodups=True)
+        move = player.get_action(moves, self) if moves else None
 
         if move:
-            self.take_action(move, self.players[0])
-
-        if player_num:
-            self.reverse()
+            self.take_action(move, player.player)
 
     def clone(self):
         """

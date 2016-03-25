@@ -4,6 +4,7 @@ from __future__ import division
 import os
 import time
 import random
+import evaluation
 import numpy as np
 import tensorflow as tf
 
@@ -13,7 +14,7 @@ from backgammon.agents.random_agent import RandomAgent
 from backgammon.agents.td_gammon_agent import TDAgent
 
 model_path = os.environ.get('MODEL_PATH', 'models/')
-summary_path = os.environ.get('SUMMARY_PATH', 'logs/')
+summary_path = os.environ.get('SUMMARY_PATH', 'summaries/')
 checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
 
 if not os.path.exists(model_path):
@@ -43,9 +44,9 @@ class Model(object):
 
         # learning rate and lambda decay
         self.alpha = tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
-            10000, 0.96, staircase=True), name='alpha') # learning rate
+            10000, 0.96), name='alpha') # learning rate
         self.lm = tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
-            10000, 0.96, staircase=True, name='lambda')) # lambda
+            10000, 0.96), name='lambda') # lambda
 
         alpha_summary = tf.scalar_summary('alpha', self.alpha)
         lm_summary = tf.scalar_summary('lambda', self.lm)
@@ -194,39 +195,11 @@ class Model(object):
     def get_output(self, x):
         return self.sess.run(self.V, feed_dict={ self.x: x })
 
-    def play(self):
-        players = [TDAgent(Game.TOKENS[0], self), HumanAgent(Game.TOKENS[1])]
-        game = Game()
-        game.reset()
-
-        player_num = random.randint(0, 1)
-        while not game.is_over():
-            game.next_step(players[player_num], player_num, draw=True)
-            player_num = (player_num + 1) % 2
-
-    def test(self, episodes=100):
-        players = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
-        winners = [0, 0]
-        for episode in range(episodes):
-            game = Game()
-            game.reset()
-
-            player_num = random.randint(0, 1)
-            while not game.is_over():
-                game.next_step(players[player_num], player_num, draw=False)
-                player_num = (player_num + 1) % 2
-
-            winner = game.winner()
-            winners[not winner] += 1
-
-            os.system('clear')
-            print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
-            print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))
-
     def train(self):
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
         summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), self.sess.graph_def))
 
+        # the agent plays against itself, making the best move for each player
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
 
         validation_interval = 1000
@@ -234,7 +207,7 @@ class Model(object):
 
         for episode in range(episodes):
             if episode != 0 and episode % validation_interval == 0:
-                self.test(episodes=100)
+                evaluation.test(players, episodes=100)
 
             game = Game()
             game.reset()
@@ -275,4 +248,4 @@ class Model(object):
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
-        self.test(episodes=1000)
+        evaluation.test(players, episodes=1000)
