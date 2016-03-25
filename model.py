@@ -131,23 +131,18 @@ class Model(object):
             for grad, tvar in zip(grads, tvars):
                 with tf.variable_scope('trace'):
                     # e-> = lambda * e-> + <grad of output w.r.t weights>
-                    # lambda 0..1
-                    # trace +/-
-                    # grad +/-
                     trace = tf.Variable(tf.zeros(grad.get_shape()), trainable=False, name='trace')
                     trace_op = trace.assign((self.lm * trace) + grad)
                     tf.histogram_summary(tvar.name + '/traces', trace)
 
-                # alpha 0..1
-                # sigma +/-
-                # trace +/- (acc. grad.)
+                # final grad = alpha * sigma * e
                 final_grad = self.alpha * sigma_op * trace_op
                 tf.histogram_summary(tvar.name + '/gradients/final', final_grad)
 
                 assign_op = tvar.assign_add(final_grad)
                 grad_updates.append(assign_op)
 
-        # define single operation to apply all gradient updates
+        # as part of training we want to update our step and other tracking variables
         with tf.control_dependencies([
             global_step_op,
             game_step_op,
@@ -157,6 +152,7 @@ class Model(object):
             accuracy_ema_op,
             loss_avg_ema_op
         ]):
+            # define single operation to apply all gradient updates
             self.train_op = tf.group(*grad_updates, name='train')
 
         # merge summaries for TensorBoard
