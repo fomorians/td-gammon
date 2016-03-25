@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 from backgammon.game import Game
+from backgammon.agents.human_agent import HumanAgent
 from backgammon.agents.random_agent import RandomAgent
 from backgammon.agents.td_gammon_agent import TDAgent
 
@@ -116,19 +117,6 @@ class Model(object):
             loss_sum_reset_op = loss_sum.assign(0.0)
             self.reset_op = tf.group(*[loss_sum_reset_op, game_step_reset_op])
 
-        game_summaries = [
-            alpha_summary,
-            lm_summary,
-            sigma_summary,
-            loss_summary,
-            accuracy_summary,
-            sigma_ema_summary,
-            loss_ema_summary,
-            accuracy_ema_summary,
-            loss_avg_summary,
-            loss_avg_ema_summary
-        ]
-
         # increment global step: we keep this as a variable so it's saved with checkpoints
         global_step_op = self.global_step.assign_add(1)
 
@@ -179,7 +167,6 @@ class Model(object):
             self.train_op = tf.group(*grad_updates, name='train')
 
         # merge summaries for TensorBoard
-        self.game_summaries_op = tf.merge_summary(game_summaries)
         self.summaries_op = tf.merge_all_summaries()
 
         # create a saver for periodic checkpoints
@@ -198,12 +185,22 @@ class Model(object):
     def get_output(self, x):
         return self.sess.run(self.V, feed_dict={ self.x: x })
 
+    def play(self):
+        players = [TDAgent(Game.TOKENS[0], self), HumanAgent(Game.TOKENS[1])]
+        game = Game()
+        game.reset()
+
+        player_num = random.randint(0, 1)
+        while not game.is_over():
+            game.next_step(players[player_num], player_num, draw=True)
+            player_num = (player_num + 1) % 2
+
     def test(self, episodes=100):
         players = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
         winners = [0, 0]
         for _ in range(episodes):
-            game = Game(Game.LAYOUT)
-            game.new_game()
+            game = Game()
+            game.reset()
 
             player_num = random.randint(0, 1)
             while not game.is_over():
@@ -219,9 +216,7 @@ class Model(object):
 
     def train(self):
         tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
-
         summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), self.sess.graph_def))
-        summary_writer_game = tf.train.SummaryWriter('{0}{1}_game'.format(summary_path, int(time.time())), self.sess.graph_def)
 
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
 
@@ -232,15 +227,16 @@ class Model(object):
             if episode != 0 and episode % validation_interval == 0:
                 self.test(episodes=100)
 
-            game = Game(Game.LAYOUT)
-            game.new_game()
+            game = Game()
+            game.reset()
 
             player_num = random.randint(0, 1)
-            x = game.extract_features(players[player_num].player)
+            player = players[player_num]
+
+            x = game.extract_features(player.player)
 
             game_step = 0
             while not game.is_over():
-                player = players[player_num]
                 game.next_step(player, player_num)
 
                 x_next = game.extract_features(player.player)
@@ -253,26 +249,24 @@ class Model(object):
 
                 summary_writer.add_summary(summaries, global_step=global_step)
 
+                player_num = (player_num + 1) % 2
+                player = players[player_num]
+
                 x = x_next
                 game_step += 1
-                player_num = (player_num + 1) % 2
 
             winner = game.winner()
 
-            _, global_step, summaries, summaries_game, _ = self.sess.run([
+            _, global_step, summaries, _ = self.sess.run([
                 self.train_op,
                 self.global_step,
                 self.summaries_op,
-                self.game_summaries_op,
                 self.reset_op
             ], feed_dict={ self.x: x, self.V_next: np.array([[winner]]) })
-            summary_writer.add_summary(summaries, global_step=global_step)
-            summary_writer_game.add_summary(summaries_game, global_step=episode)
+            summary_writer.add_summary(summaries, global_step=episode)
 
             print("Game: %d/%d in %d turns" % (episode, episodes, game_step))
-
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
-        summary_writer_game.close()
         self.test(episodes=1000)
