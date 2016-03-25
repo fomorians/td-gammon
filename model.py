@@ -9,7 +9,6 @@ import numpy as np
 import tensorflow as tf
 
 from backgammon.game import Game
-from backgammon.agents.human_agent import HumanAgent
 from backgammon.agents.random_agent import RandomAgent
 from backgammon.agents.td_gammon_agent import TDAgent
 
@@ -204,7 +203,7 @@ class Model(object):
         players_test = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
 
         validation_interval = 1000
-        episodes = 5000
+        episodes = 2000
 
         for episode in range(episodes):
             if episode != 0 and episode % validation_interval == 0:
