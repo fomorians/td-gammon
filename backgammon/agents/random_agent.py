@@ -1,7 +1,6 @@
 import random
-from agent import Agent
 
-class RandomAgent(Agent):
+class RandomAgent(object):
 
     def __init__(self, player):
         self.player = player

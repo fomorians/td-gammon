@@ -1,7 +1,6 @@
 import numpy as np
-from agent import Agent
 
-class TDAgent(Agent, object):
+class TDAgent(object):
 
     def __init__(self, player, model):
         self.player = player
