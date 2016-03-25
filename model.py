@@ -67,9 +67,9 @@ class Model(object):
         tf.scalar_summary('V_next', tf.reduce_sum(self.V_next))
         tf.scalar_summary('V', tf.reduce_sum(self.V))
 
-        # sigma = V_next - V
-        sigma_op = tf.reduce_sum(self.V_next - self.V, name='sigma')
-        tf.scalar_summary('sigma', sigma_op)
+        # delta = V_next - V
+        delta_op = tf.reduce_sum(self.V_next - self.V, name='delta')
+        tf.scalar_summary('delta', delta_op)
 
         # mean squared error of the difference between the next state and the current state
         loss_op = tf.reduce_mean(tf.square(self.V_next - self.V), name='loss')
@@ -81,9 +81,9 @@ class Model(object):
         accuracy_ema_op = accuracy_ema.apply([accuracy_op])
         accuracy_ema_summary = tf.scalar_summary('accuracy_ema', accuracy_ema.average(accuracy_op))
 
-        sigma_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
-        sigma_ema_op = sigma_ema.apply([sigma_op])
-        sigma_ema_summary = tf.scalar_summary('sigma_ema', sigma_ema.average(sigma_op))
+        delta_ema = tf.train.ExponentialMovingAverage(decay=0.9999)
+        delta_ema_op = delta_ema.apply([delta_op])
+        delta_ema_summary = tf.scalar_summary('delta_ema', delta_ema.average(delta_op))
 
         loss_ema = tf.train.ExponentialMovingAverage(decay=0.999)
         loss_ema_op = loss_ema.apply([loss_op])
@@ -99,10 +99,10 @@ class Model(object):
             loss_avg_op = loss_sum / tf.maximum(game_step, 1.0)
             loss_avg_summary = tf.scalar_summary('game/loss_avg', loss_avg_op)
 
-            sigma_sum = tf.Variable(tf.constant(0.0), name='sigma_sum', trainable=False)
-            sigma_sum_op = sigma_sum.assign_add(sigma_op)
-            sigma_avg_op = sigma_sum / tf.maximum(game_step, 1.0)
-            sigma_avg_summary = tf.scalar_summary('game/sigma_avg', sigma_avg_op)
+            delta_sum = tf.Variable(tf.constant(0.0), name='delta_sum', trainable=False)
+            delta_sum_op = delta_sum.assign_add(delta_op)
+            delta_avg_op = delta_sum / tf.maximum(game_step, 1.0)
+            delta_avg_summary = tf.scalar_summary('game/delta_avg', delta_avg_op)
 
             accuracy_sum = tf.Variable(tf.constant(0.0), name='accuracy_sum', trainable=False)
             accuracy_sum_op = accuracy_sum.assign_add(accuracy_op)
@@ -113,9 +113,9 @@ class Model(object):
             loss_avg_ema_op = loss_avg_ema.apply([loss_avg_op])
             loss_avg_ema_summary = tf.scalar_summary('game/loss_avg_ema', loss_avg_ema.average(loss_avg_op))
 
-            sigma_avg_ema = tf.train.ExponentialMovingAverage(decay=0.999)
-            sigma_avg_ema_op = sigma_avg_ema.apply([sigma_avg_op])
-            sigma_avg_ema_summary = tf.scalar_summary('game/sigma_avg_ema', sigma_avg_ema.average(sigma_avg_op))
+            delta_avg_ema = tf.train.ExponentialMovingAverage(decay=0.999)
+            delta_avg_ema_op = delta_avg_ema.apply([delta_avg_op])
+            delta_avg_ema_summary = tf.scalar_summary('game/delta_avg_ema', delta_avg_ema.average(delta_avg_op))
 
             accuracy_avg_ema = tf.train.ExponentialMovingAverage(decay=0.999)
             accuracy_avg_ema_op = accuracy_avg_ema.apply([accuracy_avg_op])
@@ -140,7 +140,7 @@ class Model(object):
             tf.histogram_summary(tvar.name, tvar)
             tf.histogram_summary(tvar.name + '/gradients/original', grad)
 
-        # for each variable, define operations to update the tvar with sigma,
+        # for each variable, define operations to update the tvar with delta,
         # taking into account the gradient as part of the eligibility trace
         grad_updates = []
         with tf.variable_scope('grad_updates'):
@@ -151,8 +151,8 @@ class Model(object):
                     trace_op = trace.assign((self.lm * trace) + grad)
                     tf.histogram_summary(tvar.name + '/traces', trace)
 
-                # final grad = alpha * sigma * e
-                final_grad = self.alpha * sigma_op * trace_op
+                # final grad = alpha * delta * e
+                final_grad = self.alpha * delta_op * trace_op
                 tf.histogram_summary(tvar.name + '/gradients/final', final_grad)
 
                 assign_op = tvar.assign_add(final_grad)
@@ -163,13 +163,13 @@ class Model(object):
             global_step_op,
             game_step_op,
             loss_sum_op,
-            sigma_sum_op,
+            delta_sum_op,
             accuracy_sum_op,
             loss_ema_op,
-            sigma_ema_op,
+            delta_ema_op,
             accuracy_ema_op,
             loss_avg_ema_op,
-            sigma_avg_ema_op,
+            delta_avg_ema_op,
             accuracy_avg_ema_op
         ]):
             # define single operation to apply all gradient updates
