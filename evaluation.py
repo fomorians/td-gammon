@@ -1,4 +1,3 @@
-import os
 import random
 
 from backgammon.game import Game
@@ -17,7 +16,6 @@ def test(players, episodes=100):
         winner = game.winner()
         winners[not winner] += 1
 
-        os.system('clear')
         print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
         print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))
 
