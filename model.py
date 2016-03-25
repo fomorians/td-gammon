@@ -52,7 +52,7 @@ class Model(object):
         lm_summary = tf.scalar_summary('lambda', self.lm)
 
         # describe network size
-        input_layer_size = 294
+        input_layer_size = 782
         hidden_layer_size = 50
         output_layer_size = 1
 

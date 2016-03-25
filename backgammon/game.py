@@ -6,10 +6,10 @@ useful include:
 
 game.clone() - returns a copy of the current game.
 
-game.takeAction(action,player) - takes the action for the
+game.take_action(action,player) - takes the action for the
 player.
 
-game.getActions(roll,player) - returns the set of legal
+game.get_actions(roll,player) - returns the set of legal
 actions for a given roll and player.
 
 game.die - the number of sides on the die.
@@ -19,15 +19,15 @@ game.opponent(player) - returns the opponent of the given player.
 game.grid - 2-D array (list of lists) with current piece placement
 on board. For example game.grid[0][3] = 'x'
 
-game.barPieces - dictionary with key as playe and value a
+game.bar_pieces - dictionary with key as playe and value a
 list of pieces on the bar for that player. Recall on the bar
 means the piece was "clobbered" by the opponent. In our simplified
 backgammon these pieces can't return to play.
 
-game.offPieces - dictionary with key as playe and value a
+game.off_pieces - dictionary with key as playe and value a
 list of pieces successfully taken of the board by the player.
 
-game.numPieces - dictionary with key as player and value
+game.num_pieces - dictionary with key as player and value
 number of total pieces for that player.
 
 game.players - list of players 1 and 2 in order
@@ -81,17 +81,29 @@ class Game:
         features = []
         for p in self.players:
             for col in self.grid:
-                feats = [0.] * 6
+                col_features = [0.] * 15
                 if len(col) > 0 and col[0] == p:
                     for i in range(len(col)):
-                        feats[min(i, 5)] += 1
-                features += feats
-            features.append(float(len(self.bar_pieces[p])) / 2.)
-            features.append(float(len(self.off_pieces[p])) / self.num_pieces[p])
+                        col_features[i] += 1
+                features += col_features
+
+            bar_features = [0.] * 15
+            off_features = [0.] * 15
+
+            for i in range(len(self.bar_pieces[p])):
+                bar_features[i] += 1
+
+            for i in range(len(self.off_pieces[p])):
+                off_features[i] += 1
+
+            features += bar_features
+            features += off_features
+
         if player == self.players[0]:
             features += [1., 0.]
         else:
             features += [0., 1.]
+
         return np.array(features).reshape(1, -1)
 
     def roll_dice(self):
