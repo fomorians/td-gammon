@@ -6,6 +6,7 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('test', False, 'If true, test against a random strategy.')
+flags.DEFINE_boolean('play', False, 'If true, play against a trained TD-Gammon strategy.')
 flags.DEFINE_boolean('restore', False, 'If true, restore a checkpoint when training.')
 
 if __name__ == '__main__':
@@ -15,6 +16,9 @@ if __name__ == '__main__':
         if FLAGS.test:
             model = Model(sess, restore=True)
             model.test()
+        elif FLAGS.play:
+            model = Model(sess, restore=True)
+            model.play()
         else:
             model = Model(sess, restore=FLAGS.restore)
             model.train()
