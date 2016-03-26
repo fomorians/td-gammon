@@ -14,7 +14,7 @@ def test(players, episodes=100):
             player_num = (player_num + 1) % 2
 
         winner = game.winner()
-        winners[not winner] += 1
+        winners[winner] += 1
 
         print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
         print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))

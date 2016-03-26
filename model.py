@@ -241,7 +241,7 @@ class Model(object):
                 self.global_step,
                 self.summaries_op,
                 self.reset_op
-            ], feed_dict={ self.x: x, self.V_next: np.array([[winner]]) })
+            ], feed_dict={ self.x: x, self.V_next: np.array([[winner]], dtype='float') })
             summary_writer.add_summary(summaries, global_step=episode)
 
             print("Game %d/%d in %d turns" % (episode, episodes, game_step))
