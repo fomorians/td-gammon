@@ -226,10 +226,7 @@ class Model(object):
 
                 x_next = game.extract_features(player.player)
                 V_next = self.get_output(x_next)
-                _, global_step = self.sess.run([
-                    self.train_op,
-                    self.global_step
-                ], feed_dict={ self.x: x, self.V_next: V_next })
+                self.sess.run(self.train_op, feed_dict={ self.x: x, self.V_next: V_next })
 
                 x = x_next
                 game_step += 1
