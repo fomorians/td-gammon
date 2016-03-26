@@ -43,9 +43,9 @@ class Model(object):
 
         # learning rate and lambda decay
         self.alpha = tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
-            20000, 0.96), name='alpha') # learning rate
+            40000, 0.96), name='alpha') # learning rate
         self.lm = tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
-            20000, 0.96), name='lambda') # lambda
+            40000, 0.96), name='lambda') # lambda
 
         alpha_summary = tf.scalar_summary('alpha', self.alpha)
         lm_summary = tf.scalar_summary('lambda', self.lm)
@@ -234,7 +234,7 @@ class Model(object):
                 self.summaries_op,
                 self.reset_op
             ], feed_dict={ self.x: x, self.V_next: np.array([[winner]], dtype='float') })
-            summary_writer.add_summary(summaries, global_step=episode)
+            summary_writer.add_summary(summaries, global_step=global_step)
 
             print("Game %d/%d (Winner: %s) in %d turns" % (episode, episodes, players[winner].player, game_step))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
