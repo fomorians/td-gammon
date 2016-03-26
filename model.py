@@ -202,29 +202,24 @@ class Model(object):
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
         players_test = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
 
-        validation_interval = 20000
-        episodes = 200000
+        validation_interval = 1000
+        episodes = 2000
 
         for episode in range(episodes):
             if episode != 0 and episode % validation_interval == 0:
                 evaluation.test(players_test, episodes=100)
 
-            game = Game()
-            game.reset()
-
+            game = Game.new()
             player_num = random.randint(0, 1)
-            player = players[player_num]
 
-            x = game.extract_features(player.player)
+            x = game.extract_features(players[player_num].player)
 
             game_step = 0
             while not game.is_over():
-                game.next_step(player, player_num)
-
+                game.next_step(players[player_num], player_num)
                 player_num = (player_num + 1) % 2
-                player = players[player_num]
 
-                x_next = game.extract_features(player.player)
+                x_next = game.extract_features(players[player_num].player)
                 V_next = self.get_output(x_next)
                 self.sess.run(self.train_op, feed_dict={ self.x: x, self.V_next: V_next })
 
@@ -241,7 +236,7 @@ class Model(object):
             ], feed_dict={ self.x: x, self.V_next: np.array([[winner]], dtype='float') })
             summary_writer.add_summary(summaries, global_step=episode)
 
-            print("Game %d/%d in %s in %d turns" % (episode, episodes, players[winner].player, game_step))
+            print("Game %d/%d (Winner: %s) in %d turns" % (episode, episodes, players[winner].player, game_step))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
