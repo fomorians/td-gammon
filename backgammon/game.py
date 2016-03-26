@@ -60,6 +60,7 @@ class Game:
         """
         self.die = Game.QUAD
         self.layout = layout
+        self.turns = 0
         if grid:
             self.grid = copy.deepcopy(grid)
             self.off_pieces = copy.deepcopy(off_pieces)
@@ -109,6 +110,8 @@ class Game:
 
         if move:
             self.take_action(move, player.player)
+
+        self.turns += 1
 
     def clone(self):
         """
@@ -266,6 +269,7 @@ class Game:
         """
         Resets game to original layout.
         """
+        self.turns = 0
         for col in self.layout.split(','):
             loc, num, token = col.split('-')
             self.grid[int(loc)] = [token for _ in range(int(num))]
