@@ -62,7 +62,7 @@ class Game:
     def roll_dice(self):
         return (random.randint(1, self.die), random.randint(1, self.die))
 
-    def play(self, draw=False):
+    def play(self, players, draw=False):
         player_num = random.randint(0, 1)
         while not self.is_over():
             self.next_step(players[player_num], player_num, draw=draw)
