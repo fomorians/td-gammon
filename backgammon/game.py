@@ -114,7 +114,6 @@ class Game:
 
         if draw:
             self.draw()
-            print(player.player, player_num, player)
             print("Player %s rolled <%d, %d>." % (player.player, roll[0], roll[1]))
 
         moves = self.get_actions(roll, player.player, nodups=True)
