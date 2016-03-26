@@ -244,7 +244,7 @@ class Model(object):
             ], feed_dict={ self.x: x, self.V_next: np.array([[winner]], dtype='float') })
             summary_writer.add_summary(summaries, global_step=episode)
 
-            print("Game %d/%d in %d turns" % (episode, episodes, game_step))
+            print("Game %d/%d in %s in %d turns" % (episode, episodes, players[winner].player, game_step))
             self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
