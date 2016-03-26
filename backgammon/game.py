@@ -78,6 +78,12 @@ class Game:
             self.off_pieces[t] = []
             self.num_pieces[t] = 0
 
+    @staticmethod
+    def new():
+        game = Game()
+        game.reset()
+        return game
+
     def extract_features(self, player):
         features = []
         for p in self.players:
@@ -98,7 +104,7 @@ class Game:
     def roll_dice(self):
         return (random.randint(1, self.die), random.randint(1, self.die))
 
-    def next_step(self, player, player_num, draw=False):
+    def next_step(self, player, draw=False):
         roll = self.roll_dice()
 
         if draw:
@@ -112,6 +118,7 @@ class Game:
             self.take_action(move, player.player)
 
         self.turns += 1
+        self.player_num = (self.player_num + 1) % 2
 
     def clone(self):
         """
@@ -269,13 +276,14 @@ class Game:
         """
         Resets game to original layout.
         """
-        self.turns = 0
         for col in self.layout.split(','):
             loc, num, token = col.split('-')
             self.grid[int(loc)] = [token for _ in range(int(num))]
         for col in self.grid:
             for piece in col:
                 self.num_pieces[piece] += 1
+        self.turns = 0
+        self.player_num = random.randint(0, 1)
 
     def winner(self):
         """

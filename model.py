@@ -204,44 +204,23 @@ class Model(object):
 
         validation_interval = 1000
         max_episodes = 2000
-        parallelism = 100
+        parallelism = 10
         episodes = 0
 
-        games = []
-        for i in range(parallelism):
-            player_num = random.randint(0, 1)
-            player = players[player_num]
-            game = Game()
-            game.reset()
-            games.append((game, player))
+        games = [Game.new() for i in range(parallelism)]
 
         while episodes < max_episodes:
-            for game, player in games:
-                x = game.extract_features(player.player)
+            for game_index, game in enumerate(games):
+                x = game.extract_features(players[game.player_num].player)
 
-                game.next_step(player, player_num)
+                game.next_step(players[game.player_num])
 
-                player_num = (player_num + 1) % 2
-                player = players[player_num]
-
-                x_next = game.extract_features(player.player)
+                x_next = game.extract_features(players[game.player_num].player)
                 V_next = self.get_output(x_next)
-                _, global_step = self.sess.run([
-                    self.train_op,
-                    self.global_step
-                ], feed_dict={ self.x: x, self.V_next: V_next })
-
-                x = x_next
+                self.sess.run(self.train_op, feed_dict={ self.x: x, self.V_next: V_next })
 
                 if game.is_over():
                     winner = game.winner()
-                    games.remove(game)
-
-                    player_num = random.randint(0, 1)
-                    player = players[player_num]
-                    game = Game()
-                    game.reset()
-                    games.append((game, player))
 
                     _, global_step, summaries, _ = self.sess.run([
                         self.train_op,
@@ -249,12 +228,16 @@ class Model(object):
                         self.summaries_op,
                         self.reset_op
                     ], feed_dict={ self.x: x, self.V_next: np.array([[winner]]) })
-                    summary_writer.add_summary(summaries, global_step=episode)
+                    summary_writer.add_summary(summaries, global_step=episodes)
 
                     episodes += 1
 
-                    print("Game %d/%d in %d turns" % (episode, episodes))
+                    print("Game %d/%d in %d turns" % (episodes, max_episodes, game.turns))
                     self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
+
+                    del games[game_index]
+
+                    games.append(Game.new())
 
         summary_writer.close()
 
