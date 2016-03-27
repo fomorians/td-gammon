@@ -1,44 +1,3 @@
-"""
-Defines a Backgammon Game object.
-
-Methods and instance variables of a Game object you may find
-useful include:
-
-game.clone() - returns a copy of the current game.
-
-game.takeAction(action,player) - takes the action for the
-player.
-
-game.getActions(roll,player) - returns the set of legal
-actions for a given roll and player.
-
-game.die - the number of sides on the die.
-
-game.opponent(player) - returns the opponent of the given player.
-
-game.grid - 2-D array (list of lists) with current piece placement
-on board. For example game.grid[0][3] = 'x'
-
-game.barPieces - dictionary with key as playe and value a
-list of pieces on the bar for that player. Recall on the bar
-means the piece was "clobbered" by the opponent. In our simplified
-backgammon these pieces can't return to play.
-
-game.offPieces - dictionary with key as playe and value a
-list of pieces successfully taken of the board by the player.
-
-game.numPieces - dictionary with key as player and value
-number of total pieces for that player.
-
-game.players - list of players 1 and 2 in order
-
-To see what's available on a game object you can try running this
-in the python shell:
-
-import game
-g = game.Game(game.LAYOUT)
-dir(g)
-"""
 import os
 import copy
 import time
@@ -77,6 +36,12 @@ class Game:
             self.off_pieces[t] = []
             self.num_pieces[t] = 0
 
+    @staticmethod
+    def new():
+        game = Game()
+        game.reset()
+        return game
+
     def extract_features(self, player):
         features = []
         for p in self.players:
@@ -97,12 +62,25 @@ class Game:
     def roll_dice(self):
         return (random.randint(1, self.die), random.randint(1, self.die))
 
+    def play(self, players, draw=False):
+        player_num = random.randint(0, 1)
+        while not self.is_over():
+            self.next_step(players[player_num], player_num, draw=draw)
+            player_num = (player_num + 1) % 2
+        return self.winner()
+
     def next_step(self, player, player_num, draw=False):
         roll = self.roll_dice()
 
         if draw:
             self.draw()
+
+        self.take_turn(player, roll, draw=draw)
+
+    def take_turn(self, player, roll, draw=False):
+        if draw:
             print("Player %s rolled <%d, %d>." % (player.player, roll[0], roll[1]))
+            time.sleep(1)
 
         moves = self.get_actions(roll, player.player, nodups=True)
         move = player.get_action(moves, self) if moves else None
@@ -277,7 +255,7 @@ class Game:
         """
         Get winner.
         """
-        return len(self.off_pieces[self.players[0]]) == self.num_pieces[self.players[0]]
+        return 0 if len(self.off_pieces[self.players[0]]) == self.num_pieces[self.players[0]] else 1
 
     def is_over(self):
         """
