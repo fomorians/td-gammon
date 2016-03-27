@@ -1,29 +1,5 @@
-from __future__ import print_function
-from __future__ import division
-
-import os
-import time
-import random
-import evaluation
 import numpy as np
 import tensorflow as tf
-
-from backgammon.game import Game
-from backgammon.agents.random_agent import RandomAgent
-from backgammon.agents.td_gammon_agent import TDAgent
-
-model_path = os.environ.get('MODEL_PATH', 'models/')
-summary_path = os.environ.get('SUMMARY_PATH', 'summaries/')
-checkpoint_path = os.environ.get('CHECKPOINT_PATH', 'checkpoints/')
-
-if not os.path.exists(model_path):
-    os.makedirs(model_path)
-
-if not os.path.exists(checkpoint_path):
-    os.makedirs(checkpoint_path)
-
-if not os.path.exists(summary_path):
-    os.makedirs(summary_path)
 
 def weight_bias(input_size, output_size):
     W = tf.Variable(tf.truncated_normal([input_size, output_size], stddev=0.1), name='weight')
@@ -193,52 +169,3 @@ class Model(object):
 
     def get_output(self, x):
         return self.sess.run(self.V, feed_dict={ self.x: x })
-
-    def train(self):
-        tf.train.write_graph(self.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
-        summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), self.sess.graph_def))
-
-        # the agent plays against itself, making the best move for each player
-        players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
-        players_test = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
-
-        validation_interval = 1000
-        episodes = 2000
-
-        for episode in range(episodes):
-            if episode != 0 and episode % validation_interval == 0:
-                evaluation.test(players_test, episodes=100)
-
-            game = Game.new()
-            player_num = random.randint(0, 1)
-
-            x = game.extract_features(players[player_num].player)
-
-            game_step = 0
-            while not game.is_over():
-                game.next_step(players[player_num], player_num)
-                player_num = (player_num + 1) % 2
-
-                x_next = game.extract_features(players[player_num].player)
-                V_next = self.get_output(x_next)
-                self.sess.run(self.train_op, feed_dict={ self.x: x, self.V_next: V_next })
-
-                x = x_next
-                game_step += 1
-
-            winner = game.winner()
-
-            _, global_step, summaries, _ = self.sess.run([
-                self.train_op,
-                self.global_step,
-                self.summaries_op,
-                self.reset_op
-            ], feed_dict={ self.x: x, self.V_next: np.array([[winner]], dtype='float') })
-            summary_writer.add_summary(summaries, global_step=global_step)
-
-            print("Game %d/%d (Winner: %s) in %d turns" % (episode, episodes, players[winner].player, game_step))
-            self.saver.save(self.sess, checkpoint_path + 'checkpoint', global_step=global_step)
-
-        summary_writer.close()
-
-        evaluation.test(players_test, episodes=1000)
