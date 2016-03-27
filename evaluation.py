@@ -1,3 +1,5 @@
+from __future__ import division
+
 import time
 import random
 import numpy as np
@@ -19,8 +21,12 @@ def test(players, episodes=100, draw=False):
         winner = game.play(players, draw=draw)
         winners[winner] += 1
 
-        print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
-        print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))
+        winners_total = sum(winners)
+        print("[Episode %d] %s (%s) vs %s (%s) %d:%d of %d games (%.2f%%)" % (episode, \
+            players[0].name, players[0].player, \
+            players[1].name, players[1].player, \
+            winners[0], winners[1], winners_total, \
+            (winners[0] / winners_total) * 100.0))
 
 def train(model, model_path, summary_path, checkpoint_path):
     tf.train.write_graph(model.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
