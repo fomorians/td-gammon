@@ -1,7 +1,8 @@
-import evaluation
+import os
 import tensorflow as tf
 
 from model import Model
+from evaluation import play, test, train
 
 from backgammon.game import Game
 from backgammon.agents.human_agent import HumanAgent
@@ -35,11 +36,11 @@ if __name__ == '__main__':
         if FLAGS.test:
             model = Model(sess, restore=True)
             players = [TDAgent(Game.TOKENS[0], model), RandomAgent(Game.TOKENS[1])]
-            evaluation.test(players, episodes=1000)
+            test(players, episodes=1000)
         elif FLAGS.play:
             model = Model(sess, restore=True)
             players = [TDAgent(Game.TOKENS[0], model), HumanAgent(Game.TOKENS[1])]
-            evaluation.play(players)
+            play(players)
         else:
             model = Model(sess, restore=FLAGS.restore)
-            evaluation.train(sess, model)
+            train(model, model_path, summary_path, checkpoint_path)

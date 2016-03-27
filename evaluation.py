@@ -1,6 +1,7 @@
 import time
 import random
 import numpy as np
+import tensorflow as tf
 
 from backgammon.game import Game
 from backgammon.agents.random_agent import RandomAgent
@@ -21,11 +22,9 @@ def test(players, episodes=100, draw=False):
         print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
         print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[1].name, players[1].player, winners[1], sum(winners)))
 
-def train(sess):
-    tf.train.write_graph(sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
-    summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), sess.graph_def))
-
-    model = Model()
+def train(model, model_path, summary_path, checkpoint_path):
+    tf.train.write_graph(model.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
+    summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), model.sess.graph_def))
 
     # the agent plays against itself, making the best move for each player
     players = [TDAgent(Game.TOKENS[0], model), TDAgent(Game.TOKENS[1], model)]
@@ -50,14 +49,14 @@ def train(sess):
 
             x_next = game.extract_features(players[player_num].player)
             V_next = model.get_output(x_next)
-            sess.run(model.train_op, feed_dict={ model.x: x, model.V_next: V_next })
+            model.sess.run(model.train_op, feed_dict={ model.x: x, model.V_next: V_next })
 
             x = x_next
             game_step += 1
 
         winner = game.winner()
 
-        _, global_step, summaries, _ = sess.run([
+        _, global_step, summaries, _ = model.sess.run([
             model.train_op,
             model.global_step,
             model.summaries_op,
@@ -66,7 +65,7 @@ def train(sess):
         summary_writer.add_summary(summaries, global_step=global_step)
 
         print("Game %d/%d (Winner: %s) in %d turns" % (episode, episodes, players[winner].player, game_step))
-        model.saver.save(sess, checkpoint_path + 'checkpoint', global_step=global_step)
+        model.saver.save(model.sess, checkpoint_path + 'checkpoint', global_step=global_step)
 
     summary_writer.close()
 
