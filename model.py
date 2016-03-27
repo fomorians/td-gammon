@@ -1,3 +1,5 @@
+from __future__ import division
+
 import time
 import random
 import numpy as np
@@ -32,11 +34,11 @@ class Model(object):
 
         # lambda decay
         lamda = tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
-            10000, 0.9, staircase=True), name='lambda')
+            50000, 0.9, staircase=True), name='lambda')
 
         # learning rate decay
         alpha = tf.maximum(0.01, tf.train.exponential_decay(0.1, self.global_step, \
-            10000, 0.9, staircase=True), name='alpha')
+            100000, 0.9, staircase=True), name='alpha')
 
         tf.scalar_summary('lambda', lamda)
         tf.scalar_summary('alpha', alpha)
@@ -170,11 +172,11 @@ class Model(object):
     def get_output(self, x):
         return self.sess.run(self.V, feed_dict={ self.x: x })
 
-    def play(players):
+    def play(self):
         game = Game.new()
         game.play([TDAgent(Game.TOKENS[0], self), HumanAgent(Game.TOKENS[1])], draw=True)
 
-    def test(episodes=100, draw=False):
+    def test(self, episodes=100, draw=False):
         players = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
         winners = [0, 0]
         for episode in range(episodes):
@@ -196,14 +198,13 @@ class Model(object):
 
         # the agent plays against itself, making the best move for each player
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
-        players_test = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
 
-        validation_interval = 100
-        episodes = 200
+        validation_interval = 10
+        episodes = 20
 
         for episode in range(episodes):
-            if episode != 0 and episode % validation_interval == 0:
-                self.test(players_test, episodes=100)
+            if episode != 1 and episode % validation_interval == 0:
+                self.test(episodes=10)
 
             game = Game.new()
             player_num = random.randint(0, 1)
@@ -237,4 +238,4 @@ class Model(object):
 
         summary_writer.close()
 
-        test(players_test, episodes=1000)
+        self.test(episodes=10)
