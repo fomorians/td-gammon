@@ -28,6 +28,7 @@ def test(players, episodes=100, draw=False):
             winners[0], winners[1], winners_total, \
             (winners[0] / winners_total) * 100.0))
 
+# TODO: move this to train.py
 def train(model, model_path, summary_path, checkpoint_path):
     tf.train.write_graph(model.sess.graph_def, model_path, 'td_gammon.pb', as_text=False)
     summary_writer = tf.train.SummaryWriter('{0}{1}'.format(summary_path, int(time.time()), model.sess.graph_def))
@@ -36,8 +37,8 @@ def train(model, model_path, summary_path, checkpoint_path):
     players = [TDAgent(Game.TOKENS[0], model), TDAgent(Game.TOKENS[1], model)]
     players_test = [TDAgent(Game.TOKENS[0], model), RandomAgent(Game.TOKENS[1])]
 
-    validation_interval = 1000
-    episodes = 2000
+    validation_interval = 2000
+    episodes = 20000
 
     for episode in range(episodes):
         if episode != 0 and episode % validation_interval == 0:

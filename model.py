@@ -12,6 +12,7 @@ def dense_layer(x, input_size, output_size, activation, name):
         return activation(tf.matmul(x, W) + b, name='activation')
 
 class Model(object):
+    # TODO: remove sess
     def __init__(self, sess, checkpoint_path, restore=False):
         # setup our session
         self.sess = sess
@@ -21,7 +22,7 @@ class Model(object):
         self.alpha = tf.maximum(0.02, tf.train.exponential_decay(0.1, self.global_step, \
             40000, 0.96), name='alpha') # learning rate
         self.lm = tf.maximum(0.7, tf.train.exponential_decay(0.9, self.global_step, \
-            40000, 0.96), name='lambda') # lambda
+            30000, 0.96), name='lambda') # lambda
 
         alpha_summary = tf.scalar_summary('alpha', self.alpha)
         lm_summary = tf.scalar_summary('lambda', self.lm)
@@ -168,4 +169,5 @@ class Model(object):
                 self.saver.restore(self.sess, latest_checkpoint_path)
 
     def get_output(self, x):
+        # TODO: use tf.get_default_session()
         return self.sess.run(self.V, feed_dict={ self.x: x })
