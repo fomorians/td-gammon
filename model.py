@@ -12,7 +12,7 @@ def dense_layer(x, input_size, output_size, activation, name):
         return activation(tf.matmul(x, W) + b, name='activation')
 
 class Model(object):
-    def __init__(self, sess, restore=False):
+    def __init__(self, sess, checkpoint_path, restore=False):
         # setup our session
         self.sess = sess
         self.global_step = tf.Variable(0, trainable=False, name='global_step')

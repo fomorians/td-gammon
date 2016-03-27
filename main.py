@@ -34,13 +34,13 @@ if __name__ == '__main__':
     sess = tf.Session(graph=graph)
     with sess.as_default(), graph.as_default():
         if FLAGS.test:
-            model = Model(sess, restore=True)
+            model = Model(sess, checkpoint_path, restore=True)
             players = [TDAgent(Game.TOKENS[0], model), RandomAgent(Game.TOKENS[1])]
             test(players, episodes=1000)
         elif FLAGS.play:
-            model = Model(sess, restore=True)
+            model = Model(sess, checkpoint_path, restore=True)
             players = [TDAgent(Game.TOKENS[0], model), HumanAgent(Game.TOKENS[1])]
             play(players)
         else:
-            model = Model(sess, restore=FLAGS.restore)
+            model = Model(sess, checkpoint_path, restore=FLAGS.restore)
             train(model, model_path, summary_path, checkpoint_path)
