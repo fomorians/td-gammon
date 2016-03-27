@@ -19,7 +19,7 @@ class TDAgent(object):
             ateList = game.take_action(a, self.player)
             features = game.extract_features(game.opponent(self.player))
             v = self.model.get_output(features)
-            v = 1. - v if self.player == 0 else v
+            v = 1. - v if self.player == Game.TOKENS[0] else v
             if v > v_best:
                 v_best = v
                 a_best = a
