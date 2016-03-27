@@ -44,17 +44,17 @@ class Model(object):
         tf.scalar_summary('alpha', alpha)
 
         # describe network size
-        input_layer_size = 294
-        hidden_layer_size = 50
-        output_layer_size = 1
+        layer_size_input = 294
+        layer_size_hidden = 50
+        layer_size_output = 1
 
         # placeholders for input and target output
-        self.x = tf.placeholder('float', [1, input_layer_size], name='x')
-        self.V_next = tf.placeholder('float', [1, output_layer_size], name='V_next')
+        self.x = tf.placeholder('float', [1, layer_size_input], name='x')
+        self.V_next = tf.placeholder('float', [1, layer_size_output], name='V_next')
 
         # build network arch. (just 2 layers with sigmoid activation)
-        prev_y = dense_layer(self.x, [input_layer_size, hidden_layer_size], tf.sigmoid, name='layer1')
-        self.V = dense_layer(prev_y, [hidden_layer_size, output_layer_size], tf.sigmoid, name='layer2')
+        prev_y = dense_layer(self.x, [layer_size_input, layer_size_hidden], tf.sigmoid, name='layer1')
+        self.V = dense_layer(prev_y, [layer_size_hidden, layer_size_output], tf.sigmoid, name='layer2')
 
         # watch the individual value predictions over time
         tf.scalar_summary('V_next', tf.reduce_sum(self.V_next))
