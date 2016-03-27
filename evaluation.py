@@ -7,7 +7,7 @@ def test(players, episodes=100, draw=False):
     for episode in range(episodes):
         game = Game.new()
 
-        winner = game.play(players)
+        winner = game.play(players, draw=draw)
         winners[winner] += 1
 
         print("[Episode %d] Player %s \t (%s) %d/%d" % (episode, players[0].name, players[0].player, winners[0], sum(winners)))
