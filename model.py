@@ -199,12 +199,12 @@ class Model(object):
         # the agent plays against itself, making the best move for each player
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
 
-        validation_interval = 10
-        episodes = 20
+        validation_interval = 2000
+        episodes = 20000
 
         for episode in range(episodes):
-            if episode != 1 and episode % validation_interval == 0:
-                self.test(episodes=10)
+            if episode != 0 and episode % validation_interval == 0:
+                self.test(episodes=100)
 
             game = Game.new()
             player_num = random.randint(0, 1)
@@ -238,4 +238,4 @@ class Model(object):
 
         summary_writer.close()
 
-        self.test(episodes=10)
+        self.test(episodes=1000)
