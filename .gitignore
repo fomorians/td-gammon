@@ -2,6 +2,5 @@
 .env/
 logs/
 summaries/
-checkpoints/
 models/
 *.pyc
