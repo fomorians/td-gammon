@@ -2,7 +2,7 @@
 
 Implementation of [TD-Gammon](http://www.bkgm.com/articles/tesauro/tdl.html) in TensorFlow.
 
-Before DeepMind tackled playing Atari games or built AlphaGo there was TD-Gammon, an algorithm that combined reinforcement learning with neural networks to play backgammon. While not as famous, it actually shares a lot of history with AlphaGo. Originally published in 1992 by Gerald Tesauro, it was the first algorithm to reach an expert level of play in backgammon. It is referenced in both Atari and AlphaGo research papers and helped set the groundwork for many of the advancements made in the last few years. Including the notion of self-play seen in AlphaGo.
+Before DeepMind tackled playing Atari games or built AlphaGo there was TD-Gammon, the first algorithm to reach an expert level of play in backgammon. Gerald Tesauro published his paper in 1992 describing TD-Gammon as a neural network trained with reinforcement learning. It is referenced in both Atari and AlphaGo research papers and helped set the groundwork for many of the advancements made in the last few years.
 
 The code features [eligibility traces](https://webdocs.cs.ualberta.ca/~sutton/book/ebook/node87.html#fig:GDTDl) on the gradients which are an elegant way to assign credit to actions made in the past.
 
