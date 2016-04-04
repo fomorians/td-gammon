@@ -12,8 +12,8 @@ The code features [eligibility traces](https://webdocs.cs.ualberta.ca/~sutton/bo
 
 1. Follow the [installation guide](https://fomoro.gitbooks.io/guide/content/installation.html) for Fomoro.
 2. Clone the repo: `git clone https://github.com/fomorians/td-gammon.git && cd td-gammon`
-3. Create a new model: `fomoro model create`
-4. Start training: `fomoro session start`
+3. Create a new model: `fomoro model add`
+4. Start training: `fomoro session start -f`
 
 ### Local Setup
 
