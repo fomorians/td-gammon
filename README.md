@@ -14,7 +14,6 @@ The code features [eligibility traces](https://webdocs.cs.ualberta.ca/~sutton/bo
 2. Clone the repo: `git clone https://github.com/fomorians/td-gammon.git && cd td-gammon`
 3. Create a new model: `fomoro model create`
 4. Start training: `fomoro session start`
-5. Follow the logs: `fomoro session logs -f`
 
 ### Local Setup
 
