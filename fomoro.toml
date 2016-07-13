@@ -1,4 +1,0 @@
-name = "td-gammon"
-repo = "https://github.com/fomorians/td-gammon.git"
-description = "Implementation of TD-Gammon in TensorFlow"
-environment = "tensorflow"
