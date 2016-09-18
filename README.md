@@ -8,13 +8,11 @@ The code features [eligibility traces](https://webdocs.cs.ualberta.ca/~sutton/bo
 
 ## Training
 
-### Setup
-
 1. [Install TensorFlow](https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#pip-installation).
 2. Clone the repo: `git clone https://github.com/fomorians/td-gammon.git && cd td-gammon`
 3. Run training: `python main.py`
 
-# Play
+## Play
 
 To play against a trained model: `python main.py --play --restore`
 
