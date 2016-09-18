@@ -8,14 +8,7 @@ The code features [eligibility traces](https://webdocs.cs.ualberta.ca/~sutton/bo
 
 ## Training
 
-### Cloud Setup
-
-1. Follow the [installation guide](https://fomoro.gitbooks.io/guide/content/installation.html) for Fomoro.
-2. Clone the repo: `git clone https://github.com/fomorians/td-gammon.git && cd td-gammon`
-3. Create a new model: `fomoro model add`
-4. Start training: `fomoro session start -f`
-
-### Local Setup
+### Setup
 
 1. [Install TensorFlow](https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#pip-installation).
 2. Clone the repo: `git clone https://github.com/fomorians/td-gammon.git && cd td-gammon`
